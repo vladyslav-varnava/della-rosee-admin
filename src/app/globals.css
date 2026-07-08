@@ -47,3 +47,19 @@ a {
     color-scheme: dark;
   }
 }
+
+@import 'react-quill-new/dist/quill.snow.css';
+
+.ql-toolbar.ql-snow {
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  border-color: #e4e4e7;
+}
+
+.ql-container.ql-snow {
+  min-height: 180px;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+  border-color: #e4e4e7;
+  font-size: 15px;
+}
