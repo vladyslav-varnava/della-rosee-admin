@@ -88,10 +88,6 @@ const getDiscountAmount = (discount: Record<string, unknown>) => {
   return Number(amount) || 0;
 };
 
-type InfoRowProps = {
-  label: string;
-  value?: string | number | null;
-};
 type InfoListProps = {
   children: ReactNode;
 };
@@ -111,13 +107,21 @@ const InfoList = ({ children }: InfoListProps) => {
   );
 };
 
+type InfoRowProps = {
+  label: string;
+  value?: ReactNode;
+};
+
 const InfoRow = ({ label, value }: InfoRowProps) => {
+  const hasValue = value !== null && value !== undefined && value !== '';
+
   return (
     <Flex justify="space-between" gap={4} py={2}>
       <Text color="gray.500">{label}</Text>
-      <Text fontWeight="700" color="della.text" textAlign="right">
-        {value || '—'}
-      </Text>
+
+      <Box fontWeight="700" color="della.text" textAlign="right">
+        {hasValue ? value : '—'}
+      </Box>
     </Flex>
   );
 };
@@ -392,6 +396,8 @@ const OrderItemsCard = ({ order }: OrderItemsCardProps) => {
 export const OrderDetailsPageClient = ({ orderId }: Props) => {
   const { data: order, isPending, isError } = useGetOrder(orderId);
 
+
+
   if (isPending) {
     return (
       <Center py={16}>
@@ -433,6 +439,8 @@ export const OrderDetailsPageClient = ({ orderId }: Props) => {
   }
 
   const discounts = order.discounts ?? [];
+  const userId = order.userId ?? order.user?.id;
+
 
   return (
     <Stack gap={5}>
@@ -499,7 +507,25 @@ export const OrderDetailsPageClient = ({ orderId }: Props) => {
           <Stack gap={5}>
             <SectionCard title="Клієнт" icon={<LuUser />}>
               <InfoList>
-                <InfoRow label="Імʼя" value={getCustomerName(order)} />
+                <InfoRow
+                  label="Імʼя"
+                  value={
+                    userId ? (
+                      <Link href={`/users/${userId}`}>
+                        <Text
+                          as="span"
+                          color="blue.600"
+                          fontWeight="800"
+                          _hover={{ textDecoration: 'underline' }}
+                        >
+                          {getCustomerName(order)}
+                        </Text>
+                      </Link>
+                    ) : (
+                      getCustomerName(order)
+                    )
+                  }
+                />
                 <InfoRow label="Телефон" value={order.phone} />
                 <InfoRow label="Email" value={order.email} />
                 <InfoRow

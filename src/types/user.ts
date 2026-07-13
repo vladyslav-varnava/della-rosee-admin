@@ -1,7 +1,47 @@
 export type UserRole = 'ADMIN' | 'USER' | string;
 
+export const LOYALTY_LEVEL = {
+  NONE: 'NONE',
+  BRONZE: 'BRONZE',
+  SILVER: 'SILVER',
+  GOLD: 'GOLD',
+  PLATINUM: 'PLATINUM',
+} as const;
+
 export type LoyaltyLevel =
-  'NONE' | 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | string;
+  (typeof LOYALTY_LEVEL)[keyof typeof LOYALTY_LEVEL];
+
+export const loyaltyLevelOptions = [
+  { label: 'Без рівня', value: LOYALTY_LEVEL.NONE },
+  { label: 'Bronze', value: LOYALTY_LEVEL.BRONZE },
+  { label: 'Silver', value: LOYALTY_LEVEL.SILVER },
+  { label: 'Gold', value: LOYALTY_LEVEL.GOLD },
+  { label: 'Platinum', value: LOYALTY_LEVEL.PLATINUM },
+];
+
+export const translateLoyaltyLevel = (level?: string) => {
+  const levels: Record<string, string> = {
+    NONE: 'Без рівня',
+    BRONZE: 'Bronze',
+    SILVER: 'Silver',
+    GOLD: 'Gold',
+    PLATINUM: 'Platinum',
+  };
+
+  return levels[level ?? ''] ?? level ?? '—';
+};
+
+export const getLoyaltyLevelColor = (level?: string) => {
+  const colors: Record<string, string> = {
+    NONE: 'gray',
+    BRONZE: 'orange',
+    SILVER: 'gray',
+    GOLD: 'yellow',
+    PLATINUM: 'purple',
+  };
+
+  return colors[level ?? ''] ?? 'gray';
+};
 
 export type User = {
   id: number;
@@ -54,18 +94,6 @@ export const translateUserRole = (role: string) => {
   return roles[role] ?? role;
 };
 
-export const translateLoyaltyLevel = (level: string) => {
-  const levels: Record<string, string> = {
-    NONE: 'Без рівня',
-    BRONZE: 'Bronze',
-    SILVER: 'Silver',
-    GOLD: 'Gold',
-    PLATINUM: 'Platinum',
-  };
-
-  return levels[level] ?? level;
-};
-
 export const getUserRoleColor = (role: string) => {
   const colors: Record<string, string> = {
     ADMIN: 'purple',
@@ -85,4 +113,13 @@ export const getLoyaltyColor = (level: string) => {
   };
 
   return colors[level] ?? 'gray';
+};
+
+export type UpdateUserAdminPayload = {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  loyaltyLevel?: LoyaltyLevel;
+  totalSpentThisYear?: number;
 };

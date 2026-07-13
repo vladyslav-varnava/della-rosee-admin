@@ -107,6 +107,8 @@ export const FileUploadField = ({
         >
           {displayUrl ? (
             isVideoUrl(displayUrl) ? (
+              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+              // @ts-expect-error
               <Box as="video" src={displayUrl} controls w="100%" h="260px" />
             ) : (
               <Image
@@ -136,6 +138,8 @@ export const FileUploadField = ({
 
         <Button
           as="label"
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-expect-error
           htmlFor={fileInputId}
           type="button"
           variant="outline"

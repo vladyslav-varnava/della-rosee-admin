@@ -25,10 +25,20 @@ export const useUpdateOrder = () => {
       });
     },
 
-    onSuccess: async (updatedOrder: Order) => {
+    onSuccess: async (updatedOrder: Order, variables) => {
       queryClient.setQueryData<Order>(
-        ordersKeys.details(updatedOrder.id),
-        updatedOrder,
+        ordersKeys.details(variables.id),
+        (currentOrder) => {
+          if (!currentOrder) return updatedOrder;
+
+          return {
+            ...currentOrder,
+            ...updatedOrder,
+            orderItems: updatedOrder.orderItems ?? currentOrder.orderItems,
+            user: updatedOrder.user ?? currentOrder.user,
+            discounts: updatedOrder.discounts ?? currentOrder.discounts,
+          };
+        },
       );
 
       await queryClient.invalidateQueries({

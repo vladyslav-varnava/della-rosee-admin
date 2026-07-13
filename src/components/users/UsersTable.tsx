@@ -132,7 +132,7 @@ export const UsersTable = ({ data }: Props) => {
                     color="della.text"
                     _hover={{ bg: 'della.primaryHover' }}
                   >
-                    <Link href={`/users/${user.id}/edit`}>
+                    <Link href={`/users/${user.id}`}>
                       <LuPencil />
                       Редагувати
                     </Link>
