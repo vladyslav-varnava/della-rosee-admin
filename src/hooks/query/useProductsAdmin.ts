@@ -20,3 +20,11 @@ export const useProductsAdmin = (params: GetProductsAdminParams) => {
     placeholderData: (previousData) => previousData,
   });
 };
+
+export const useGetProduct = (id: number) => {
+  return useQuery({
+    queryKey: productsKeys.details(id),
+    queryFn: () => productsService.getProduct(id),
+    enabled: Number.isFinite(id) && id > 0,
+  });
+};

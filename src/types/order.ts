@@ -1,8 +1,3 @@
-export type PaymentType =
-  'CASH' | 'CARD' | 'ONLINE' | 'MONOBANK' | 'PAY_ON_DELIVERY' | string;
-
-export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'CANCELED' | string;
-
 export type DeliveryType =
   'PICKUP' | 'NOVA_POSHTA_WAREHOUSE' | 'NOVA_POSHTA_POSTMAT' | string;
 
@@ -102,6 +97,7 @@ export type GetOrdersAdminParams = {
 export type UpdateOrderPayload = Partial<
   Pick<
     Order,
+    | 'amount'
     | 'paymentType'
     | 'paymentStatus'
     | 'deliveryType'
@@ -111,6 +107,7 @@ export type UpdateOrderPayload = Partial<
     | 'lastName'
     | 'email'
     | 'phone'
+    | 'sellerId'
   >
 >;
 
@@ -122,9 +119,11 @@ export type UpdateOrderStatusPayload = {
 export const ORDER_STATUS = {
   PENDING: 'PENDING',
   PROCESSING: 'PROCESSING',
+  PROCESSED: 'PROCESSED',
+  DISPATCHED: 'DISPATCHED',
   COMPLETED: 'COMPLETED',
-  CANCELED: 'CANCELED',
   CANCELLED: 'CANCELLED',
+  RETURNED: 'RETURNED',
 } as const;
 
 export type OrderStatus =
@@ -134,34 +133,11 @@ export const translateOrderStatus = (status: string) => {
   const statuses: Record<string, string> = {
     PENDING: 'Нове',
     PROCESSING: 'В обробці',
+    PROCESSED: 'Оброблено',
+    DISPATCHED: 'Відправлено',
     COMPLETED: 'Виконано',
-    CANCELED: 'Скасовано',
     CANCELLED: 'Скасовано',
-  };
-
-  return statuses[status] ?? status;
-};
-
-export const translatePaymentType = (type: string) => {
-  const types: Record<string, string> = {
-    CASH: 'Готівка',
-    CARD: 'Картка',
-    ONLINE: 'Онлайн',
-    MONOBANK: 'Monobank',
-    PAY_ON_DELIVERY: 'Накладений платіж',
-    CARD_AFTER_DELIVERY: 'Картка після доставки',
-    PAY_ON_IBAN: 'Оплата по IBAN',
-  };
-
-  return types[type] ?? type;
-};
-
-export const translatePaymentStatus = (status: string) => {
-  const statuses: Record<string, string> = {
-    PENDING: 'Очікує',
-    PAID: 'Оплачено',
-    FAILED: 'Помилка',
-    CANCELED: 'Скасовано',
+    RETURNED: 'Повернення',
   };
 
   return statuses[status] ?? status;
@@ -179,12 +155,146 @@ export const translateDeliveryType = (type: string) => {
 
 export const getOrderStatusColor = (status: string) => {
   const colors: Record<string, string> = {
-    PENDING: 'red',
+    PENDING: 'orange',
     PROCESSING: 'blue',
+    PROCESSED: 'purple',
+    DISPATCHED: 'cyan',
     COMPLETED: 'green',
-    CANCELED: 'gray',
-    CANCELLED: 'gray',
+    CANCELLED: 'red',
+    RETURNED: 'gray',
   };
 
   return colors[status] ?? 'gray';
+};
+
+export const ORDER_STATUS_OPTIONS = [
+  ORDER_STATUS.PENDING,
+  ORDER_STATUS.PROCESSING,
+  ORDER_STATUS.PROCESSED,
+  ORDER_STATUS.DISPATCHED,
+  ORDER_STATUS.COMPLETED,
+  ORDER_STATUS.CANCELLED,
+  ORDER_STATUS.RETURNED,
+] as const;
+
+export const PAYMENT_TYPE = {
+  CARD: 'CARD',
+  CASH: 'CASH',
+  CARD_AFTER_DELIVERY: 'CARD_AFTER_DELIVERY',
+  COMBINED_PAY: 'COMBINED_PAY',
+  PAY_ON_IBAN: 'PAY_ON_IBAN',
+} as const;
+
+export type PaymentType = (typeof PAYMENT_TYPE)[keyof typeof PAYMENT_TYPE];
+
+export const paymentTypeOptions = [
+  {
+    label: 'Онлайн за допомогою платіжної системи',
+    value: PAYMENT_TYPE.CARD,
+  },
+  {
+    label: 'Готівка при отриманні',
+    value: PAYMENT_TYPE.CASH,
+  },
+  {
+    label: 'Карткою при отриманні',
+    value: PAYMENT_TYPE.CARD_AFTER_DELIVERY,
+  },
+  {
+    label: 'Комбінована оплата',
+    value: PAYMENT_TYPE.COMBINED_PAY,
+  },
+  {
+    label: 'Оплата на IBAN',
+    value: PAYMENT_TYPE.PAY_ON_IBAN,
+  },
+];
+
+export const translatePaymentType = (paymentType: string) => {
+  const translations: Record<string, string> = {
+    CARD: 'Онлайн за допомогою платіжної системи',
+    CASH: 'Готівка при отриманні',
+    CARD_AFTER_DELIVERY: 'Карткою при отриманні',
+    COMBINED_PAY: 'Комбінована оплата',
+    PAY_ON_IBAN: 'Оплата на IBAN',
+  };
+
+  return translations[paymentType] ?? paymentType;
+};
+
+export const PAYMENT_STATUS = {
+  pending: 'pending',
+  created: 'created',
+  processing: 'processing',
+  hold: 'hold',
+  success: 'success',
+  failure: 'failure',
+  reversed: 'reversed',
+  expired: 'expired',
+} as const;
+
+export const DELIVERY_TYPE = {
+  PICKUP: 'PICKUP',
+  NOVA_POSHTA_WAREHOUSE: 'NOVA_POSHTA_WAREHOUSE',
+  NOVA_POSHTA_POSTMAT: 'NOVA_POSHTA_POSTMAT',
+} as const;
+
+
+export const deliveryTypeOptions = [
+  { label: 'Нова Пошта відділення', value: DELIVERY_TYPE.NOVA_POSHTA_WAREHOUSE },
+  { label: 'Нова Пошта поштомат', value: DELIVERY_TYPE.NOVA_POSHTA_POSTMAT },
+  { label: 'Самовивіз', value: DELIVERY_TYPE.PICKUP },
+];
+
+export type PaymentStatus =
+  (typeof PAYMENT_STATUS)[keyof typeof PAYMENT_STATUS];
+
+export const paymentStatusOptions = [
+  {
+    label: 'Оплата очікується',
+    value: PAYMENT_STATUS.pending,
+  },
+  {
+    label: 'Оплата створена',
+    value: PAYMENT_STATUS.created,
+  },
+  {
+    label: 'Оплата в обробці',
+    value: PAYMENT_STATUS.processing,
+  },
+  {
+    label: 'Оплата на утриманні',
+    value: PAYMENT_STATUS.hold,
+  },
+  {
+    label: 'Оплата успішна',
+    value: PAYMENT_STATUS.success,
+  },
+  {
+    label: 'Сталась помилка при оплаті',
+    value: PAYMENT_STATUS.failure,
+  },
+  {
+    label: 'Платіж повернено',
+    value: PAYMENT_STATUS.reversed,
+  },
+  {
+    label: 'Оплата не виконана вчасно',
+    value: PAYMENT_STATUS.expired,
+  },
+];
+
+export const translatePaymentStatus = (paymentStatus: string) => {
+  const translations: Record<string, string> = {
+    pending: 'Оплата очікується',
+    created: 'Оплата створена',
+    processing: 'Оплата в обробці',
+    hold: 'Оплата на утриманні',
+    success: 'Оплата успішна',
+    failure: 'Сталась помилка при оплаті',
+    reversed: 'Платіж повернено',
+    expired: 'Оплата не виконана вчасно',
+  };
+
+  return translations[paymentStatus] ?? paymentStatus;
 };

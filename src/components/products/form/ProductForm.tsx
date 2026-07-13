@@ -16,7 +16,8 @@ import {
 import { MultiOptionSelectField } from './MultiOptionSelectField';
 import { SingleOptionSelectField } from './SingleOptionSelectField';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
+import { ProductVariantsSection } from '@/components/products/variants/ProductVariantsSection';
 import dynamic from 'next/dynamic';
 
 import {
@@ -263,284 +264,291 @@ export const ProductForm = ({ product }: Props) => {
           </Center>
         </Box>
       )}
+      <Stack gap={5}>
+        <form onSubmit={submitForm}>
+          <Stack gap={5}>
+            <ProductFormSection
+              title={isEditMode ? 'Редагування продукту' : 'Створення продукту'}
+              description="Основна інформація, яка буде відображатися на сторінці товару."
+            >
+              <Flex gap={3} wrap="wrap">
+                {isEditMode && (
+                  <Badge
+                    w="fit-content"
+                    colorPalette={isVisible ? 'green' : 'red'}
+                    px={3}
+                    py={1}
+                    borderRadius="full"
+                  >
+                    {isVisible ? 'Опубліковано' : 'Не опубліковано'}
+                  </Badge>
+                )}
 
-      <form onSubmit={submitForm}>
-        <Stack gap={5}>
-          <ProductFormSection
-            title={isEditMode ? 'Редагування продукту' : 'Створення продукту'}
-            description="Основна інформація, яка буде відображатися на сторінці товару."
-          >
-            <Flex gap={3} wrap="wrap">
-              {isEditMode && (
-                <Badge
-                  w="fit-content"
-                  colorPalette={isVisible ? 'green' : 'red'}
-                  px={3}
-                  py={1}
-                  borderRadius="full"
-                >
-                  {isVisible ? 'Опубліковано' : 'Не опубліковано'}
-                </Badge>
-              )}
+                {watch('hasActivePromotion') && (
+                  <Badge
+                    w="fit-content"
+                    colorPalette="purple"
+                    px={3}
+                    py={1}
+                    borderRadius="full"
+                  >
+                    Акція
+                  </Badge>
+                )}
 
-              {watch('hasActivePromotion') && (
-                <Badge
-                  w="fit-content"
-                  colorPalette="purple"
-                  px={3}
-                  py={1}
-                  borderRadius="full"
-                >
-                  Акція
-                </Badge>
-              )}
+                {watch('isComingSoon') && (
+                  <Badge
+                    w="fit-content"
+                    colorPalette="orange"
+                    px={3}
+                    py={1}
+                    borderRadius="full"
+                  >
+                    Скоро
+                  </Badge>
+                )}
+              </Flex>
 
-              {watch('isComingSoon') && (
-                <Badge
-                  w="fit-content"
-                  colorPalette="orange"
-                  px={3}
-                  py={1}
-                  borderRadius="full"
-                >
-                  Скоро
-                </Badge>
-              )}
-            </Flex>
+              <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                <Field.Root invalid={!!errors.title}>
+                  <Field.Label>Назва</Field.Label>
+                  <Input
+                    placeholder="Наприклад: Obagi Retinol 0.5"
+                    {...register('title', {
+                      required: 'Вкажіть назву продукту',
+                    })}
+                  />
+                  <Field.HelperText>
+                    Бренд бажано також вказувати в назві.
+                  </Field.HelperText>
+                  <Field.ErrorText>{errors.title?.message}</Field.ErrorText>
+                </Field.Root>
 
-            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-              <Field.Root invalid={!!errors.title}>
-                <Field.Label>Назва</Field.Label>
-                <Input
-                  placeholder="Наприклад: Obagi Retinol 0.5"
-                  {...register('title', {
-                    required: 'Вкажіть назву продукту',
+                <Controller
+                  control={control}
+                  name="brand"
+                  rules={{
+                    required: 'Оберіть бренд',
+                  }}
+                  render={({ field }) => (
+                    <SingleOptionSelectField
+                      label="Бренд"
+                      value={field.value}
+                      options={brandsList}
+                      placeholder="Оберіть бренд"
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+
+                <Controller
+                  control={control}
+                  name="country"
+                  render={({ field }) => (
+                    <SingleOptionSelectField
+                      label="Країна виробник"
+                      value={field.value}
+                      options={countriesTypesList}
+                      placeholder="Оберіть країну"
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+
+                <Controller
+                  control={control}
+                  name="useTime"
+                  render={({ field }) => (
+                    <SingleOptionSelectField
+                      label="Час використання"
+                      value={field.value}
+                      options={useTimeList}
+                      placeholder="Оберіть час використання"
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              </SimpleGrid>
+
+              <Field.Root invalid={!!errors.shortDescription}>
+                <Field.Label>Короткий опис</Field.Label>
+                <Textarea
+                  minH="120px"
+                  placeholder="Короткий опис для картки та верхньої частини PDP"
+                  {...register('shortDescription', {
+                    required: 'Вкажіть короткий опис',
                   })}
                 />
-                <Field.HelperText>
-                  Бренд бажано також вказувати в назві.
-                </Field.HelperText>
-                <Field.ErrorText>{errors.title?.message}</Field.ErrorText>
+                <Field.ErrorText>
+                  {errors.shortDescription?.message}
+                </Field.ErrorText>
               </Field.Root>
+            </ProductFormSection>
 
-              <Controller
-                control={control}
-                name="brand"
-                rules={{
-                  required: 'Оберіть бренд',
-                }}
-                render={({ field }) => (
-                  <SingleOptionSelectField
-                    label="Бренд"
-                    value={field.value}
-                    options={brandsList}
-                    placeholder="Оберіть бренд"
-                    onChange={field.onChange}
-                  />
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="country"
-                render={({ field }) => (
-                  <SingleOptionSelectField
-                    label="Країна виробник"
-                    value={field.value}
-                    options={countriesTypesList}
-                    placeholder="Оберіть країну"
-                    onChange={field.onChange}
-                  />
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="useTime"
-                render={({ field }) => (
-                  <SingleOptionSelectField
-                    label="Час використання"
-                    value={field.value}
-                    options={useTimeList}
-                    placeholder="Оберіть час використання"
-                    onChange={field.onChange}
-                  />
-                )}
-              />
-            </SimpleGrid>
-
-            <Field.Root invalid={!!errors.shortDescription}>
-              <Field.Label>Короткий опис</Field.Label>
-              <Textarea
-                minH="120px"
-                placeholder="Короткий опис для картки та верхньої частини PDP"
-                {...register('shortDescription', {
-                  required: 'Вкажіть короткий опис',
-                })}
-              />
-              <Field.ErrorText>
-                {errors.shortDescription?.message}
-              </Field.ErrorText>
-            </Field.Root>
-          </ProductFormSection>
-
-          <ProductFormSection
-            title="Фільтри та категорії"
-            description="Оберіть значення, які будуть використовуватись у фільтрах, меню та картках продукту."
-          >
-            <SimpleGrid columns={{ base: 1, xl: 2 }} gap={5}>
-              <Controller
-                control={control}
-                name="bodyType"
-                render={({ field }) => (
-                  <MultiOptionSelectField
-                    label="Частина тіла"
-                    value={field.value}
-                    options={bodyTypesList}
-                    helperText="Головний фільтр у шапці сайту."
-                    onChange={field.onChange}
-                  />
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="types"
-                render={({ field }) => (
-                  <MultiOptionSelectField
-                    label="Типи товару"
-                    value={field.value}
-                    options={productTypeOptions}
-                    helperText="Випадаюче меню в шапці сайту та фільтри."
-                    placeholder="Пошук типу товару..."
-                    onChange={field.onChange}
-                  />
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="skinTypes"
-                render={({ field }) => (
-                  <MultiOptionSelectField
-                    label="Тип шкіри"
-                    value={field.value}
-                    options={skinTypesList}
-                    placeholder="Пошук типу шкіри..."
-                    onChange={field.onChange}
-                  />
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="treats"
-                render={({ field }) => (
-                  <MultiOptionSelectField
-                    label="Проблеми / дія"
-                    value={field.value}
-                    options={treatsTypesList}
-                    placeholder="Пошук проблеми..."
-                    onChange={field.onChange}
-                  />
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="ingredients"
-                render={({ field }) => (
-                  <MultiOptionSelectField
-                    label="Інгредієнти"
-                    value={field.value}
-                    options={
-                      ingredients
-                        ?.slice()
-                        .sort((a, b) => a.label.localeCompare(b.label, 'uk'))
-                        .map((ingredient) => ({
-                          value: ingredient.value,
-                          label: ingredient.label,
-                        })) ?? []
-                    }
-                    placeholder="Пошук інгредієнта..."
-                    helperText="Список приходить з API /ingredients."
-                    onChange={field.onChange}
-                  />
-                )}
-              />
-            </SimpleGrid>
-          </ProductFormSection>
-
-          <Box
-            position="sticky"
-            bottom={4}
-            zIndex={20}
-            bg="white"
-            border="1px solid"
-            borderColor="blackAlpha.100"
-            borderRadius="2xl"
-            p={4}
-            boxShadow="0 16px 48px rgba(45, 45, 45, 0.14)"
-          >
-            <Flex
-              align={{ base: 'stretch', md: 'center' }}
-              justify="space-between"
-              direction={{ base: 'column', md: 'row' }}
-              gap={3}
+            <ProductFormSection
+              title="Фільтри та категорії"
+              description="Оберіть значення, які будуть використовуватись у фільтрах, меню та картках продукту."
             >
-              <Box>
-                <Text fontWeight="800" color="della.text">
-                  {isDirty ? 'Є незбережені зміни' : 'Змін поки немає'}
-                </Text>
+              <SimpleGrid columns={{ base: 1, xl: 2 }} gap={5}>
+                <Controller
+                  control={control}
+                  name="bodyType"
+                  render={({ field }) => (
+                    <MultiOptionSelectField
+                      label="Частина тіла"
+                      value={field.value}
+                      options={bodyTypesList}
+                      helperText="Головний фільтр у шапці сайту."
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
 
-                <Text fontSize="sm" color="gray.500">
-                  Після створення продукт відкриється на сторінці редагування.
-                </Text>
-              </Box>
+                <Controller
+                  control={control}
+                  name="types"
+                  render={({ field }) => (
+                    <MultiOptionSelectField
+                      label="Типи товару"
+                      value={field.value}
+                      options={productTypeOptions}
+                      helperText="Випадаюче меню в шапці сайту та фільтри."
+                      placeholder="Пошук типу товару..."
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
 
-              <HStack gap={3} wrap="wrap">
-                {isEditMode && (
+                <Controller
+                  control={control}
+                  name="skinTypes"
+                  render={({ field }) => (
+                    <MultiOptionSelectField
+                      label="Тип шкіри"
+                      value={field.value}
+                      options={skinTypesList}
+                      placeholder="Пошук типу шкіри..."
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+
+                <Controller
+                  control={control}
+                  name="treats"
+                  render={({ field }) => (
+                    <MultiOptionSelectField
+                      label="Проблеми / дія"
+                      value={field.value}
+                      options={treatsTypesList}
+                      placeholder="Пошук проблеми..."
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+
+                <Controller
+                  control={control}
+                  name="ingredients"
+                  render={({ field }) => (
+                    <MultiOptionSelectField
+                      label="Інгредієнти"
+                      value={field.value}
+                      options={
+                        ingredients
+                          ?.slice()
+                          .sort((a, b) => a.label.localeCompare(b.label, 'uk'))
+                          .map((ingredient) => ({
+                            value: ingredient.value,
+                            label: ingredient.label,
+                          })) ?? []
+                      }
+                      placeholder="Пошук інгредієнта..."
+                      helperText="Список приходить з API /ingredients."
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              </SimpleGrid>
+            </ProductFormSection>
+
+            <Box
+              position="sticky"
+              bottom={4}
+              zIndex={20}
+              bg="white"
+              border="1px solid"
+              borderColor="blackAlpha.100"
+              borderRadius="2xl"
+              p={4}
+              boxShadow="0 16px 48px rgba(45, 45, 45, 0.14)"
+            >
+              <Flex
+                align={{ base: 'stretch', md: 'center' }}
+                justify="space-between"
+                direction={{ base: 'column', md: 'row' }}
+                gap={3}
+              >
+                <Box>
+                  <Text fontWeight="800" color="della.text">
+                    {isDirty ? 'Є незбережені зміни' : 'Змін поки немає'}
+                  </Text>
+
+                  <Text fontSize="sm" color="gray.500">
+                    Після створення продукт відкриється на сторінці редагування.
+                  </Text>
+                </Box>
+
+                <HStack gap={3} wrap="wrap">
+                  {isEditMode && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      loading={
+                        activateProduct.isPending || deactivateProduct.isPending
+                      }
+                      onClick={toggleProductVisibility}
+                    >
+                      {isVisible ? 'Деактивувати' : 'Активувати'}
+                    </Button>
+                  )}
+
+                  {isEditMode && (
+                    <Button
+                      type="button"
+                      colorPalette="red"
+                      variant="outline"
+                      loading={deleteProduct.isPending}
+                      onClick={removeProduct}
+                    >
+                      <LuTrash2 />
+                      Видалити
+                    </Button>
+                  )}
+
                   <Button
-                    type="button"
-                    variant="outline"
-                    loading={
-                      activateProduct.isPending || deactivateProduct.isPending
-                    }
-                    onClick={toggleProductVisibility}
+                    type="submit"
+                    bg="della.primary"
+                    color="della.text"
+                    _hover={{ bg: 'della.primaryHover' }}
+                    loading={createProduct.isPending || updateProduct.isPending}
+                    disabled={isEditMode ? !isDirty : false}
                   >
-                    {isVisible ? 'Деактивувати' : 'Активувати'}
+                    <LuSave />
+                    {isEditMode ? 'Зберегти зміни' : 'Створити продукт'}
                   </Button>
-                )}
-
-                {isEditMode && (
-                  <Button
-                    type="button"
-                    colorPalette="red"
-                    variant="outline"
-                    loading={deleteProduct.isPending}
-                    onClick={removeProduct}
-                  >
-                    <LuTrash2 />
-                    Видалити
-                  </Button>
-                )}
-
-                <Button
-                  type="submit"
-                  bg="della.primary"
-                  color="della.text"
-                  _hover={{ bg: 'della.primaryHover' }}
-                  loading={createProduct.isPending || updateProduct.isPending}
-                  disabled={isEditMode ? !isDirty : false}
-                >
-                  <LuSave />
-                  {isEditMode ? 'Зберегти зміни' : 'Створити продукт'}
-                </Button>
-              </HStack>
-            </Flex>
-          </Box>
-        </Stack>
-      </form>
+                </HStack>
+              </Flex>
+            </Box>
+          </Stack>
+        </form>
+        {isEditMode && product?.id && (
+          <ProductVariantsSection
+            productId={product.id}
+            variants={product.items ?? []}
+          />
+        )}
+      </Stack>
     </Box>
   );
 };

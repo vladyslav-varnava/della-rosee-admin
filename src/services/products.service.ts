@@ -17,6 +17,10 @@ export const productsService = {
     });
   },
 
+  getProduct: async (id: number) => {
+    return apiClient.get<Product>(`${PRODUCT_PATH}/${id}`);
+  },
+
   createProduct: async (payload: CreateProductInput) => {
     return apiClient.post<Product, CreateProductInput>(PRODUCT_PATH, payload);
   },

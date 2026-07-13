@@ -1,4 +1,4 @@
-import { AdminPageCard } from '@/components/admin/AdminPageCard';
+import { ProductEditPageClient } from '@/components/products/ProductEditPageClient';
 
 type Props = {
   params: Promise<{
@@ -9,10 +9,5 @@ type Props = {
 export default async function EditProductPage({ params }: Props) {
   const { id } = await params;
 
-  return (
-    <AdminPageCard
-      title={`Редагування продукту #${id}`}
-      description="Тут буде форма редагування продукту."
-    />
-  );
+  return <ProductEditPageClient productId={Number(id)} />;
 }

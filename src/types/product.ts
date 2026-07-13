@@ -44,27 +44,6 @@ export interface Product {
   image?: string;
 }
 
-export interface ProductVariant {
-  basePrice: number;
-  discount: string;
-  id: number;
-  isVisible: boolean;
-  price: number;
-  productId: number;
-  image: string;
-  imageSecondary?: string;
-  images?: string[];
-  code: string;
-  quantity: number;
-  title: string;
-  value: number;
-  unit: string;
-  cardId: number;
-  endAt?: string;
-  isShowTimer?: boolean;
-  reservedCount: number;
-}
-
 export type Ingredient = {
   id: number;
   label: string;
@@ -156,4 +135,46 @@ export type ProductOption = {
   groupLabel?: string;
   groupId?: string;
   area?: string;
+};
+
+export type ProductVariant = {
+  basePrice: number;
+  discount: string;
+  id: number;
+  isVisible: boolean;
+  price: number;
+  productId: number;
+  image: string;
+  imageSecondary?: string;
+  images?: string[];
+  code: string;
+  quantity: number;
+  title: string;
+  value: number;
+  unit: string;
+  cardId: number;
+  endAt?: string;
+  isShowTimer?: boolean;
+  reservedCount: number;
+};
+
+export type ProductVariantPayload = {
+  title: string;
+  discount: string;
+  quantity: number;
+  reservedCount: number;
+  value: number;
+  price: number;
+  basePrice: number;
+  unit: string;
+  code: string;
+  image: string;
+  imageSecondary?: string;
+  images: string[];
+  cardId: number;
+};
+
+export type CreateVariantFromSmartKasaPayload = {
+  productId: number;
+  cardId: string;
 };
