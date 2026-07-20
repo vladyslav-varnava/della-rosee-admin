@@ -4,7 +4,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { ordersKeys } from '@/hooks/query/useOrders';
 import { ordersService } from '@/services/orders.service';
-import { Order, UpdateOrderPayload, UpdateOrderStatusPayload } from '@/types/order';
+import {
+  Order,
+  UpdateOrderPayload,
+  UpdateOrderStatusPayload,
+} from '@/types/order';
 
 export const useUpdateOrderStatus = () => {
   const queryClient = useQueryClient();

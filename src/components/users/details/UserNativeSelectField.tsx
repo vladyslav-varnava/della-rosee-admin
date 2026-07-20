@@ -18,12 +18,12 @@ type Props = {
 const StyledSelect = chakra('select');
 
 export const UserNativeSelectField = ({
-                                        label,
-                                        value,
-                                        options,
-                                        placeholder = 'Оберіть значення',
-                                        onChange,
-                                      }: Props) => {
+  label,
+  value,
+  options,
+  placeholder = 'Оберіть значення',
+  onChange,
+}: Props) => {
   return (
     <Field.Root>
       <Field.Label>{label}</Field.Label>

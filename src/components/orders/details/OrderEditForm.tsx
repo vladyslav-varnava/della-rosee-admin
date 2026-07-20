@@ -7,7 +7,8 @@ import {
   Button,
   Field,
   Grid,
-  GridItem, HStack,
+  GridItem,
+  HStack,
   Input,
   SimpleGrid,
   Stack,
@@ -135,7 +136,11 @@ export const OrderEditForm = ({ order, onCancel, onSaved }: Props) => {
               Вкажіть менеджера, який обробляє замовлення.
             </Text>
 
-            <Grid mt={4} templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
+            <Grid
+              mt={4}
+              templateColumns={{ base: '1fr', md: '1fr 1fr' }}
+              gap={4}
+            >
               <GridItem>
                 <Controller
                   control={control}

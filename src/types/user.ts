@@ -1,3 +1,6 @@
+import { Address } from '@/types/delivery';
+import { Order } from '@/types/order';
+
 export type UserRole = 'ADMIN' | 'USER' | string;
 
 export const LOYALTY_LEVEL = {
@@ -8,8 +11,7 @@ export const LOYALTY_LEVEL = {
   PLATINUM: 'PLATINUM',
 } as const;
 
-export type LoyaltyLevel =
-  (typeof LOYALTY_LEVEL)[keyof typeof LOYALTY_LEVEL];
+export type LoyaltyLevel = (typeof LOYALTY_LEVEL)[keyof typeof LOYALTY_LEVEL];
 
 export const loyaltyLevelOptions = [
   { label: 'Без рівня', value: LOYALTY_LEVEL.NONE },
@@ -55,6 +57,8 @@ export type User = {
   resetPasswordToken?: string | null;
   resetPasswordExpires?: string | null;
   loyaltyLevel: LoyaltyLevel;
+  addresses?: Address[];
+  orders?: Order[];
   totalSpentThisYear: number;
   discountPercent: number;
 };

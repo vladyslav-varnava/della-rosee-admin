@@ -17,7 +17,7 @@ type Props = {
 
 const StyledSelect = chakra('select');
 
-export const NativeSelectField = ({
+export const AdminNativeSelectField = ({
   label,
   value,
   options,

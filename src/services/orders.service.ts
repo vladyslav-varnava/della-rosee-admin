@@ -6,6 +6,7 @@ import {
   UpdateOrderPayload,
   UpdateOrderStatusPayload,
 } from '@/types/order';
+import { FormOrder, FormOrderResponse } from '@/types/admin-order';
 
 const ORDER_PATH = '/order';
 
@@ -32,5 +33,8 @@ export const ordersService = {
       `${ORDER_PATH}/status/${id}`,
       { status },
     );
+  },
+  formOrder: async (payload: FormOrder) => {
+    return apiClient.post<FormOrderResponse, FormOrder>('/order/form', payload);
   },
 };

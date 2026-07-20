@@ -239,9 +239,11 @@ export const DELIVERY_TYPE = {
   NOVA_POSHTA_POSTMAT: 'NOVA_POSHTA_POSTMAT',
 } as const;
 
-
 export const deliveryTypeOptions = [
-  { label: 'Нова Пошта відділення', value: DELIVERY_TYPE.NOVA_POSHTA_WAREHOUSE },
+  {
+    label: 'Нова Пошта відділення',
+    value: DELIVERY_TYPE.NOVA_POSHTA_WAREHOUSE,
+  },
   { label: 'Нова Пошта поштомат', value: DELIVERY_TYPE.NOVA_POSHTA_POSTMAT },
   { label: 'Самовивіз', value: DELIVERY_TYPE.PICKUP },
 ];

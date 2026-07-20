@@ -1,5 +1,10 @@
 import { apiClient } from '@/lib/api';
-import { GetUsersParams, PaginatedResult, UpdateUserAdminPayload, User } from '@/types/user';
+import {
+  GetUsersParams,
+  PaginatedResult,
+  UpdateUserAdminPayload,
+  User,
+} from '@/types/user';
 
 const USERS_PATH = '/user';
 

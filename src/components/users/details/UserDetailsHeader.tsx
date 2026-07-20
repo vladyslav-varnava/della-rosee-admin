@@ -14,7 +14,9 @@ type Props = {
 };
 
 const getFullName = (user: User) => {
-  return `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Користувач';
+  return (
+    `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Користувач'
+  );
 };
 
 export const UserDetailsHeader = ({ user }: Props) => {

@@ -17,6 +17,12 @@ export const productsService = {
     });
   },
 
+  searchAdminProductsForPicker: async (params: GetProductsAdminParams) => {
+    return apiClient.get<ProductsPagedList>(`${PRODUCTS_PATH}/admin`, {
+      params,
+    });
+  },
+
   getProduct: async (id: number) => {
     return apiClient.get<Product>(`${PRODUCT_PATH}/${id}`);
   },

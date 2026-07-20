@@ -4,7 +4,7 @@ import { Box, Center, Spinner, Stack, Text, VStack } from '@chakra-ui/react';
 
 import { useGetUserById } from '@/hooks/query/useUsers';
 
-import { UserCreateOrderPlaceholder } from './UserCreateOrderPlaceholder';
+import { UserCreateOrderFlow } from './UserCreateOrderFlow';
 import { UserDetailsHeader } from './UserDetailsHeader';
 import { UserEditFormToggle } from './UserEditFormToggle';
 import { UserOrdersCard } from './UserOrdersCard';
@@ -61,7 +61,7 @@ export const UserDetailsPageClient = ({ userId }: Props) => {
 
       <UserEditFormToggle user={user} />
 
-      <UserCreateOrderPlaceholder />
+      <UserCreateOrderFlow user={user} />
 
       <UserOrdersCard orders={orders} />
     </Stack>

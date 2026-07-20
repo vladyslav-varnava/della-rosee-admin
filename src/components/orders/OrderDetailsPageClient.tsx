@@ -159,7 +159,9 @@ type StatusCardProps = {
 };
 
 const StatusCard = ({ order }: StatusCardProps) => {
-  const [selectedStatus, setSelectedStatus] = useState<OrderStatus | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<OrderStatus | null>(
+    null,
+  );
   const updateStatus = useUpdateOrderStatus();
 
   const status = selectedStatus ?? order.status;
@@ -396,8 +398,6 @@ const OrderItemsCard = ({ order }: OrderItemsCardProps) => {
 export const OrderDetailsPageClient = ({ orderId }: Props) => {
   const { data: order, isPending, isError } = useGetOrder(orderId);
 
-
-
   if (isPending) {
     return (
       <Center py={16}>
@@ -440,7 +440,6 @@ export const OrderDetailsPageClient = ({ orderId }: Props) => {
 
   const discounts = order.discounts ?? [];
   const userId = order.userId ?? order.user?.id;
-
 
   return (
     <Stack gap={5}>
@@ -560,7 +559,10 @@ export const OrderDetailsPageClient = ({ orderId }: Props) => {
 
             <SectionCard title="Сума і знижки">
               <InfoList>
-                <InfoRow label="Повна сума" value={formatMoney(order.fulAmount)} />
+                <InfoRow
+                  label="Повна сума"
+                  value={formatMoney(order.fulAmount)}
+                />
                 <InfoRow label="До оплати" value={formatMoney(order.amount)} />
 
                 {discounts.length > 0 && (
@@ -578,15 +580,18 @@ export const OrderDetailsPageClient = ({ orderId }: Props) => {
                           fontSize="sm"
                         >
                           <Text color="gray.600">
-                            {getDiscountTitle(discount as Record<string, unknown>)}
+                            {getDiscountTitle(
+                              discount as Record<string, unknown>,
+                            )}
                           </Text>
 
                           <Text fontWeight="800" color="green.600">
-                            -{formatMoney(
-                            getDiscountAmount(
-                              discount as Record<string, unknown>,
-                            ),
-                          )}
+                            -
+                            {formatMoney(
+                              getDiscountAmount(
+                                discount as Record<string, unknown>,
+                              ),
+                            )}
                           </Text>
                         </Flex>
                       ))}
