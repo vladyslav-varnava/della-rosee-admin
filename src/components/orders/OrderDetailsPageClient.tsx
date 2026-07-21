@@ -44,6 +44,7 @@ import {
   translatePaymentType,
 } from '@/types/order';
 import { OrderEditFormToggle } from '@/components/orders/details/OrderEditFormToggle';
+import { OrderEditForm } from '@/components/orders/details/OrderEditForm';
 
 type Props = {
   orderId: number;
@@ -493,117 +494,18 @@ export const OrderDetailsPageClient = ({ orderId }: Props) => {
           </Box>
         </Flex>
       </Box>
-
       <Grid templateColumns={{ base: '1fr', xl: '1fr' }} gap={5}>
         <GridItem>
           <Stack gap={5}>
             <StatusCard order={order} />
+            <OrderEditForm
+              order={order}
+            />
             <OrderItemsCard order={order} />
           </Stack>
         </GridItem>
-
-        <GridItem>
-          <Stack gap={5}>
-            <SectionCard title="Клієнт" icon={<LuUser />}>
-              <InfoList>
-                <InfoRow
-                  label="Імʼя"
-                  value={
-                    userId ? (
-                      <Link href={`/users/${userId}`}>
-                        <Text
-                          as="span"
-                          color="blue.600"
-                          fontWeight="800"
-                          _hover={{ textDecoration: 'underline' }}
-                        >
-                          {getCustomerName(order)}
-                        </Text>
-                      </Link>
-                    ) : (
-                      getCustomerName(order)
-                    )
-                  }
-                />
-                <InfoRow label="Телефон" value={order.phone} />
-                <InfoRow label="Email" value={order.email} />
-                <InfoRow
-                  label="Джерело"
-                  value={
-                    order.isFormedByAdmin
-                      ? 'Сформовано адміном'
-                      : 'Створено клієнтом'
-                  }
-                />
-              </InfoList>
-            </SectionCard>
-
-            <SectionCard title="Оплата і доставка" icon={<LuTruck />}>
-              <InfoList>
-                <InfoRow
-                  label="Тип оплати"
-                  value={translatePaymentType(order.paymentType)}
-                />
-                <InfoRow
-                  label="Статус оплати"
-                  value={translatePaymentStatus(order.paymentStatus)}
-                />
-                <InfoRow
-                  label="Доставка"
-                  value={translateDeliveryType(order.deliveryType)}
-                />
-                <InfoRow label="Відділення / склад" value={order.warehouse} />
-                <InfoRow label="Адреса" value={order.addressString} />
-              </InfoList>
-            </SectionCard>
-
-            <SectionCard title="Сума і знижки">
-              <InfoList>
-                <InfoRow
-                  label="Повна сума"
-                  value={formatMoney(order.fulAmount)}
-                />
-                <InfoRow label="До оплати" value={formatMoney(order.amount)} />
-
-                {discounts.length > 0 && (
-                  <Box pt={3}>
-                    <Text fontWeight="800" mb={2}>
-                      Застосовані знижки
-                    </Text>
-
-                    <Stack gap={2}>
-                      {discounts.map((discount, index) => (
-                        <Flex
-                          key={index}
-                          justify="space-between"
-                          gap={4}
-                          fontSize="sm"
-                        >
-                          <Text color="gray.600">
-                            {getDiscountTitle(
-                              discount as Record<string, unknown>,
-                            )}
-                          </Text>
-
-                          <Text fontWeight="800" color="green.600">
-                            -
-                            {formatMoney(
-                              getDiscountAmount(
-                                discount as Record<string, unknown>,
-                              ),
-                            )}
-                          </Text>
-                        </Flex>
-                      ))}
-                    </Stack>
-                  </Box>
-                )}
-              </InfoList>
-            </SectionCard>
-          </Stack>
-        </GridItem>
-        <OrderEditFormToggle order={order} />
       </Grid>
+
     </Stack>
   );
 };

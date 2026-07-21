@@ -1,10 +1,11 @@
-import { AdminPageCard } from '@/components/admin/AdminPageCard';
+import { Metadata } from 'next';
+
+import { FeedbacksPageClient } from '@/components/feedbacks/FeedbacksPageClient';
+
+export const metadata: Metadata = {
+  title: 'Відгуки | Della Rosee Admin',
+};
 
 export default function FeedbacksPage() {
-  return (
-    <AdminPageCard
-      title="Відгуки"
-      description="Тут буде модерація відгуків клієнтів."
-    />
-  );
+  return <FeedbacksPageClient />;
 }

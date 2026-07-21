@@ -32,6 +32,7 @@ export const AdminNativeSelectField = ({
         value={value}
         h="40px"
         w="100%"
+        mt={2}
         px={3}
         border="1px solid"
         borderColor="blackAlpha.200"

@@ -8,7 +8,7 @@ import { UserCreateOrderFlow } from './UserCreateOrderFlow';
 import { UserDetailsHeader } from './UserDetailsHeader';
 import { UserEditFormToggle } from './UserEditFormToggle';
 import { UserOrdersCard } from './UserOrdersCard';
-import { UserSummaryCards } from './UserSummaryCards';
+import { UserEditForm } from '@/components/users/details/UserEditForm';
 
 type Props = {
   userId: number;
@@ -57,9 +57,9 @@ export const UserDetailsPageClient = ({ userId }: Props) => {
     <Stack gap={5}>
       <UserDetailsHeader user={user} />
 
-      <UserSummaryCards user={user} />
-
-      <UserEditFormToggle user={user} />
+      <UserEditForm
+        user={user}
+      />
 
       <UserCreateOrderFlow user={user} />
 
