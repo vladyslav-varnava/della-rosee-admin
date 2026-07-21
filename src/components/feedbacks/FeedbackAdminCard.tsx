@@ -8,6 +8,7 @@ import {
   Card,
   Flex,
   HStack,
+  Image,
   SimpleGrid,
   Stack,
   Text,
@@ -18,7 +19,6 @@ import {
   LuEyeOff,
   LuMail,
   LuPencil,
-  LuShoppingBag,
   LuTrash2,
   LuUser,
 } from 'react-icons/lu';
@@ -48,6 +48,14 @@ const formatDate = (value?: Date | string) => {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value));
+};
+
+const isVideoLink = (value: string) => {
+  const pathname = value.split('?')[0]?.toLowerCase() ?? '';
+
+  return ['.mp4', '.mov', '.webm', '.m4v'].some((extension) =>
+    pathname.endsWith(extension),
+  );
 };
 
 export const FeedbackAdminCard = ({ feedback }: Props) => {
@@ -156,7 +164,13 @@ export const FeedbackAdminCard = ({ feedback }: Props) => {
 
           <HStack gap={2} wrap="wrap">
             {feedback.slug && (
-              <Button asChild type="button" size="xs" minH="34px" variant="outline">
+              <Button
+                asChild
+                type="button"
+                size="xs"
+                minH="34px"
+                variant="outline"
+              >
                 <NextLink
                   href={`https://dellarosee.com/product/${feedback.slug}`}
                   target="_blank"
@@ -168,7 +182,13 @@ export const FeedbackAdminCard = ({ feedback }: Props) => {
               </Button>
             )}
 
-            <Button asChild type="button" size="xs" minH="34px" variant="outline">
+            <Button
+              asChild
+              type="button"
+              size="xs"
+              minH="34px"
+              variant="outline"
+            >
               <NextLink href={`/products/${feedback.productId}/edit`}>
                 <LuPencil />
                 Редагувати товар
@@ -193,6 +213,42 @@ export const FeedbackAdminCard = ({ feedback }: Props) => {
               {feedback.message || 'Без тексту'}
             </Text>
           </Box>
+
+          {feedback.mediaLinks?.length ? (
+            <SimpleGrid columns={{ base: 1, sm: 2, lg: 3 }} gap={3}>
+              {feedback.mediaLinks.map((mediaLink, index) => (
+                <Box
+                  key={`${mediaLink}-${index}`}
+                  border="1px solid"
+                  borderColor="blackAlpha.100"
+                  bg="gray.50"
+                  borderRadius="xl"
+                  overflow="hidden"
+                  aspectRatio="4 / 3"
+                >
+                  {isVideoLink(mediaLink) ? (
+                    <video
+                      src={mediaLink}
+                      controls
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }}
+                    />
+                  ) : (
+                    <Image
+                      src={mediaLink}
+                      alt={`Медіа відгуку ${index + 1}`}
+                      w="100%"
+                      h="100%"
+                      objectFit="cover"
+                    />
+                  )}
+                </Box>
+              ))}
+            </SimpleGrid>
+          ) : null}
 
           <FeedbackReplyForm feedback={feedback} />
         </Stack>

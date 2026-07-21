@@ -5,10 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toaster } from '@/components/ui/toaster';
 import { feedbacksKeys } from '@/hooks/query/useFeedbacksAdmin';
 import { feedbacksService } from '@/services/feedbacks.service';
-import {
-  ReplyFeedbackPayload,
-  UpdateFeedbackPayload,
-} from '@/types/feedback';
+import { ReplyFeedbackPayload, UpdateFeedbackPayload } from '@/types/feedback';
 
 const getErrorMessage = (error: unknown) => {
   return error instanceof Error ? error.message : 'Спробуйте ще раз';
@@ -94,9 +91,9 @@ export const useReplyFeedback = () => {
 
   return useMutation({
     mutationFn: ({
-                   id,
-                   payload,
-                 }: {
+      id,
+      payload,
+    }: {
       id: number;
       payload: ReplyFeedbackPayload;
     }) => feedbacksService.replyFeedback(id, payload),
@@ -125,9 +122,9 @@ export const useUpdateFeedbackReply = () => {
 
   return useMutation({
     mutationFn: ({
-                   id,
-                   payload,
-                 }: {
+      id,
+      payload,
+    }: {
       id: number;
       payload: UpdateFeedbackPayload;
     }) => feedbacksService.updateFeedback(id, payload),

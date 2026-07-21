@@ -498,14 +498,11 @@ export const OrderDetailsPageClient = ({ orderId }: Props) => {
         <GridItem>
           <Stack gap={5}>
             <StatusCard order={order} />
-            <OrderEditForm
-              order={order}
-            />
+            <OrderEditForm order={order} />
             <OrderItemsCard order={order} />
           </Stack>
         </GridItem>
       </Grid>
-
     </Stack>
   );
 };

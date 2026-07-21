@@ -7,6 +7,7 @@ export interface Feedback {
   email: string;
   message: string;
   averageRating: number;
+  mediaLinks: string[];
   likesCount: number;
   isApproved: boolean;
   createdAt: Date;

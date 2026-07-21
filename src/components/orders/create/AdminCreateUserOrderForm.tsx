@@ -149,7 +149,6 @@ export const AdminCreateUserOrderForm = ({
   const formOrder = useFormOrder(cartId, user.id);
 
   const onSubmit = handleSubmit((values) => {
-    console.log('====> values onSubmit', values)
     const deliveryType = getDeliveryTypeById(values.deliveryType);
     const hasItems = Boolean(cart?.items?.length);
 
@@ -166,7 +165,7 @@ export const AdminCreateUserOrderForm = ({
     }
 
     if (deliveryType !== DELIVERY_TYPE.PICKUP) {
-      console.log('======> values', values)
+      console.log('======> values', values);
       if (!values.addressString) {
         setError('addressString', {
           message: `Поле "Місто" є обовʼязковим`,
@@ -237,10 +236,9 @@ export const AdminCreateUserOrderForm = ({
 
   useEffect(() => {
     if (addressStringValue) {
-      clearErrors()
+      clearErrors();
     }
-  }, [addressStringValue, clearErrors])
-
+  }, [addressStringValue, clearErrors]);
 
   const warehouseValue =
     useWatch({
@@ -250,9 +248,9 @@ export const AdminCreateUserOrderForm = ({
 
   useEffect(() => {
     if (warehouseValue) {
-      clearErrors()
+      clearErrors();
     }
-  }, [warehouseValue, clearErrors])
+  }, [warehouseValue, clearErrors]);
 
   const deliverySettlementRefValue =
     useWatch({

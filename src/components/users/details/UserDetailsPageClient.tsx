@@ -57,9 +57,7 @@ export const UserDetailsPageClient = ({ userId }: Props) => {
     <Stack gap={5}>
       <UserDetailsHeader user={user} />
 
-      <UserEditForm
-        user={user}
-      />
+      <UserEditForm user={user} />
 
       <UserCreateOrderFlow user={user} />
 

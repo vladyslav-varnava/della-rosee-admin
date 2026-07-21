@@ -17,7 +17,8 @@ import {
 import {
   Control,
   Controller,
-  FieldErrors, UseFormClearErrors, UseFormSetError,
+  FieldErrors,
+  UseFormClearErrors,
   UseFormSetValue,
 } from 'react-hook-form';
 
@@ -51,7 +52,7 @@ export const AdminOrderDeliveryInfo = ({
   addresses = [],
   control,
   setValue,
-                                         clearErrors,
+  clearErrors,
   deliveryType,
   addressString,
   warehouse,
@@ -70,29 +71,28 @@ export const AdminOrderDeliveryInfo = ({
 
   const setDeliveryValues = useCallback(
     (deliveryData: Address) => {
-      clearErrors()
+      clearErrors();
       setValue('firstName', deliveryData.firstName);
       setValue('lastName', deliveryData.lastName);
       setValue('phone', deliveryData.phone);
       setValue('addressString', deliveryData.city, {
         shouldDirty: true,
         shouldValidate: true,
-        shouldTouch: true
+        shouldTouch: true,
       });
-      setValue('warehouse', deliveryData.warehouseNumber,
-        {
-          shouldDirty: true,
-          shouldValidate: true,
-          shouldTouch: true
-        });
+      setValue('warehouse', deliveryData.warehouseNumber, {
+        shouldDirty: true,
+        shouldValidate: true,
+        shouldTouch: true,
+      });
       setValue(
         'deliverySettlementRef',
         deliveryData.deliverySettlementRefValue,
         {
           shouldDirty: true,
           shouldValidate: true,
-          shouldTouch: true
-        }
+          shouldTouch: true,
+        },
       );
       setValue('deliveryType', getDeliveryTypeRef(deliveryData.deliveryType));
       setValue('warehouseRef', '');
@@ -120,11 +120,10 @@ export const AdminOrderDeliveryInfo = ({
       shouldDirty: true,
       shouldValidate: true,
     });
-    setValue('warehouse', '',
-      {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
+    setValue('warehouse', '', {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
     setValue('warehouseRef', '');
     setValue('deliverySettlementRef', '');
     setValue('deliveryType', NEW_POST_WAREHOUSE_TYPE_REFS.WAREHOUSE);
@@ -139,11 +138,10 @@ export const AdminOrderDeliveryInfo = ({
         shouldDirty: true,
         shouldValidate: true,
       });
-      setValue('deliverySettlementRef', '',
-        {
-          shouldDirty: true,
-          shouldValidate: true,
-        });
+      setValue('deliverySettlementRef', '', {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
     },
     [setValue],
   );
@@ -165,7 +163,7 @@ export const AdminOrderDeliveryInfo = ({
 
   const onWarehouseSelect = useCallback(
     (warehouseItem: DropdownItem) => {
-      clearErrors()
+      clearErrors();
       setValue('warehouse', warehouseItem.label);
       setValue('warehouseRef', warehouseItem.id);
     },
@@ -175,7 +173,7 @@ export const AdminOrderDeliveryInfo = ({
   const onSettlementSelect = useCallback(
     (settlementItem: DropdownItem) => {
       setValue('addressString', settlementItem.label, {
-        shouldValidate: true
+        shouldValidate: true,
       });
       setValue('deliverySettlementRef', settlementItem.value);
       setValue('warehouse', '');
