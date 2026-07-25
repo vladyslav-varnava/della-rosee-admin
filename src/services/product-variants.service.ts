@@ -8,6 +8,10 @@ import {
 const VARIANT_PATH = '/variant';
 
 export const productVariantsService = {
+  getVariant: async (variantId: number) => {
+    return apiClient.get<ProductVariant>(`${VARIANT_PATH}/${variantId}`);
+  },
+
   createFromSmartKasa: async ({
     productId,
     cardId,

@@ -2,6 +2,7 @@
 
 import { Children, Fragment, ReactNode, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import {
   Badge,
@@ -33,6 +34,7 @@ import {
 
 import { useUpdateOrderStatus } from '@/hooks/mutations/order/useUpdateOrderStatus';
 import { useGetOrder } from '@/hooks/query/useOrders';
+import { productVariantsService } from '@/services/product-variants.service';
 import {
   getOrderStatusColor,
   ORDER_STATUS_OPTIONS,
@@ -45,6 +47,7 @@ import {
 } from '@/types/order';
 import { OrderEditFormToggle } from '@/components/orders/details/OrderEditFormToggle';
 import { OrderEditForm } from '@/components/orders/details/OrderEditForm';
+import { toaster } from '@/components/ui/toaster';
 
 type Props = {
   orderId: number;
@@ -279,7 +282,32 @@ type OrderItemsCardProps = {
 };
 
 const OrderItemsCard = ({ order }: OrderItemsCardProps) => {
+  const router = useRouter();
+  const [loadingProductVariantId, setLoadingProductVariantId] = useState<
+    number | null
+  >(null);
   const items = order.orderItems ?? [];
+
+  const navigateToProduct = async (variantId: number) => {
+    setLoadingProductVariantId(variantId);
+
+    try {
+      const variant = await productVariantsService.getVariant(variantId);
+
+      router.push(`/products/${variant.productId}/edit`);
+    } catch (error) {
+      toaster.create({
+        title: 'Не вдалося відкрити продукт',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Спробуйте ще раз або перевірте варіант товару.',
+        type: 'error',
+      });
+    } finally {
+      setLoadingProductVariantId(null);
+    }
+  };
 
   return (
     <SectionCard title={`Товари (${items.length})`} icon={<LuPackage />}>
@@ -345,12 +373,33 @@ const OrderItemsCard = ({ order }: OrderItemsCardProps) => {
                       </Text>
                     </Box>
 
-                    <Button asChild size="sm" variant="outline">
-                      <Link href={`/products/${item.productId}/edit`}>
+                    <HStack gap={2} flexShrink={0}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        loading={loadingProductVariantId === item.productId}
+                        onClick={() => void navigateToProduct(item.productId)}
+                      >
                         <LuExternalLink />
                         Продукт
-                      </Link>
-                    </Button>
+                      </Button>
+
+                      <Button
+                        asChild
+                        size="sm"
+                        variant="outline"
+                        disabled={!item.slug}
+                      >
+                        <Link
+                          href={`https://dellarosee.com/product/${item.slug}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <LuExternalLink />
+                          Сайт
+                        </Link>
+                      </Button>
+                    </HStack>
                   </Flex>
 
                   <SimpleGrid columns={{ base: 2, md: 4 }} gap={3} mt={4}>
