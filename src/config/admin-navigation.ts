@@ -40,16 +40,22 @@ export const adminNavigationGroups: AdminNavGroup[] = [
         icon: LuPackage,
       },
       {
-        href: '/ingredients',
-        label: 'Інгредієнти',
-        description: 'Довідник назв і технічних value для PDP',
-        icon: LuLeaf,
-      },
-      {
         href: '/users',
         label: 'Користувачі',
         description: 'Зареєстровані клієнти, контакти та лояльність',
         icon: LuUsers,
+      },
+      {
+        href: '/feedbacks',
+        label: 'Відгуки',
+        description: 'Модерація відгуків клієнтів',
+        icon: LuMessageSquare,
+      },
+      {
+        href: '/ingredients',
+        label: 'Інгредієнти',
+        description: 'Довідник назв і технічних value для PDP',
+        icon: LuLeaf,
       },
       {
         href: '/sellers',
@@ -62,12 +68,6 @@ export const adminNavigationGroups: AdminNavGroup[] = [
         label: 'Акції',
         description: 'Промо, знижки та акційні сторінки',
         icon: LuBadgePercent,
-      },
-      {
-        href: '/feedbacks',
-        label: 'Відгуки',
-        description: 'Модерація відгуків клієнтів',
-        icon: LuMessageSquare,
       },
     ],
   },
