@@ -2,9 +2,11 @@ import type { IconType } from 'react-icons';
 import {
   LuBadgePercent,
   LuClipboardList,
+  LuLeaf,
   LuMessageSquare,
   LuPackage,
   LuStethoscope,
+  LuStore,
   LuUsers,
   LuUserRound,
 } from 'react-icons/lu';
@@ -38,10 +40,22 @@ export const adminNavigationGroups: AdminNavGroup[] = [
         icon: LuPackage,
       },
       {
+        href: '/ingredients',
+        label: 'Інгредієнти',
+        description: 'Довідник назв і технічних value для PDP',
+        icon: LuLeaf,
+      },
+      {
         href: '/users',
         label: 'Користувачі',
         description: 'Зареєстровані клієнти, контакти та лояльність',
         icon: LuUsers,
+      },
+      {
+        href: '/sellers',
+        label: 'Продавці',
+        description: 'Команда продажів, контакти та статистика',
+        icon: LuStore,
       },
       {
         href: '/promotions',

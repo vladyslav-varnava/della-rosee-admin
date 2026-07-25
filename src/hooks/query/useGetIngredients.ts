@@ -6,6 +6,7 @@ import { ingredientsService } from '@/services/ingredients.service';
 
 export const ingredientsKeys = {
   all: ['ingredients'] as const,
+  details: (id: number) => [...ingredientsKeys.all, 'details', id] as const,
 };
 
 export const useGetIngredients = () => {

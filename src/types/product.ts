@@ -52,6 +52,12 @@ export type Ingredient = {
   updatedAt: string;
 };
 
+export interface PDPProduct extends Omit<Product, 'ingredients'> {
+  ingredients: Pick<Ingredient, 'value' | 'label'>[];
+}
+
+export type IngredientPayload = Pick<Ingredient, 'label' | 'value'>;
+
 export type CreateProductInput = {
   isPopular: boolean;
   isNew: boolean;
