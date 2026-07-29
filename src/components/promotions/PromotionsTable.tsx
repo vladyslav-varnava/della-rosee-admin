@@ -3,16 +3,22 @@
 import {
   Badge,
   Box,
+  Button,
   HStack,
+  IconButton,
   Table,
   Text,
   VStack,
 } from '@chakra-ui/react';
+import Link from 'next/link';
+import { LuPencil, LuTrash2 } from 'react-icons/lu';
 
 import { Promotion, PromotionType } from '@/types/promotion';
 
 type Props = {
   data: Promotion[];
+  deletingPromotionId?: string;
+  onDelete: (promotion: Promotion) => void;
 };
 
 const promotionTypeLabels: Record<PromotionType, string> = {
@@ -75,7 +81,11 @@ const formatUsage = (usageCount: number, usageLimit: number | null) => {
   return `${usageCount} / ${usageLimit}`;
 };
 
-export const PromotionsTable = ({ data }: Props) => {
+export const PromotionsTable = ({
+  data,
+  deletingPromotionId,
+  onDelete,
+}: Props) => {
   return (
     <Box
       w="100%"
@@ -96,6 +106,7 @@ export const PromotionsTable = ({ data }: Props) => {
             <Table.ColumnHeader>Використання</Table.ColumnHeader>
             <Table.ColumnHeader>Промокоди</Table.ColumnHeader>
             <Table.ColumnHeader>Priority</Table.ColumnHeader>
+            <Table.ColumnHeader textAlign="right">Дії</Table.ColumnHeader>
           </Table.Row>
         </Table.Header>
 
@@ -192,6 +203,28 @@ export const PromotionsTable = ({ data }: Props) => {
                 </Table.Cell>
 
                 <Table.Cell fontWeight="900">{promotion.priority}</Table.Cell>
+
+                <Table.Cell>
+                  <HStack justify="flex-end" gap={2}>
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={`/promotions/${promotion.id}/edit`}>
+                        <LuPencil />
+                        Редагувати
+                      </Link>
+                    </Button>
+
+                    <IconButton
+                      size="sm"
+                      variant="outline"
+                      colorPalette="red"
+                      aria-label="Деактивувати акцію"
+                      loading={deletingPromotionId === promotion.id}
+                      onClick={() => onDelete(promotion)}
+                    >
+                      <LuTrash2 />
+                    </IconButton>
+                  </HStack>
+                </Table.Cell>
               </Table.Row>
             );
           })}

@@ -10,6 +10,7 @@ export const promotionsKeys = {
   lists: () => [...promotionsKeys.all, 'list'] as const,
   list: (params: GetPromotionsParams) =>
     [...promotionsKeys.lists(), params] as const,
+  details: (id: string) => [...promotionsKeys.all, 'details', id] as const,
 };
 
 export const usePromotionsAdmin = (params: GetPromotionsParams) => {
@@ -17,5 +18,13 @@ export const usePromotionsAdmin = (params: GetPromotionsParams) => {
     queryKey: promotionsKeys.list(params),
     queryFn: () => promotionsService.getPromotions(params),
     placeholderData: (previousData) => previousData,
+  });
+};
+
+export const useGetPromotion = (id: string) => {
+  return useQuery({
+    queryKey: promotionsKeys.details(id),
+    queryFn: () => promotionsService.getPromotion(id),
+    enabled: Boolean(id),
   });
 };

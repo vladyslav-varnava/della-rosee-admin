@@ -7,6 +7,7 @@ import { Box, Center, Spinner, Stack, Text, VStack } from '@chakra-ui/react';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import { PromotionsFilters } from '@/components/promotions/PromotionsFilters';
 import { PromotionsTable } from '@/components/promotions/PromotionsTable';
+import { useDeletePromotion } from '@/hooks/mutations/promotion/usePromotionMutations';
 import { usePromotionsAdmin } from '@/hooks/query/usePromotionsAdmin';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import {
@@ -66,6 +67,7 @@ export default function PromotionsPage() {
   );
 
   const { data = [], isPending, isFetching } = usePromotionsAdmin(queryParams);
+  const deletePromotion = useDeletePromotion();
 
   const filteredPromotions = useMemo(() => {
     if (!debouncedSearch) {
@@ -109,6 +111,16 @@ export default function PromotionsPage() {
     requestAnimationFrame(() => {
       inputRef.current?.focus();
     });
+  };
+
+  const removePromotion = (promotion: Promotion) => {
+    const shouldDelete = window.confirm(
+      `Деактивувати акцію "${promotion.title}"?`,
+    );
+
+    if (shouldDelete) {
+      deletePromotion.mutate(promotion.id);
+    }
   };
 
   return (
@@ -157,7 +169,11 @@ export default function PromotionsPage() {
         </Box>
       ) : (
         <>
-          <PromotionsTable data={promotions} />
+          <PromotionsTable
+            data={promotions}
+            deletingPromotionId={deletePromotion.variables}
+            onDelete={removePromotion}
+          />
 
           <AdminPagination
             page={safePage}

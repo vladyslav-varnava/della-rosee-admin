@@ -51,6 +51,29 @@ export type Promotion = {
   promoCodes: PromoCode[];
 };
 
+export type PromotionPayload = {
+  title: string;
+  description?: string;
+  slug?: string;
+  type: PromotionType;
+  priority: number;
+  stackable: boolean;
+  imageUrl?: string;
+  imageUrlMobile?: string;
+  productText?: string;
+  isPageVisible: boolean;
+  isShowTimer: boolean;
+  startAt: string;
+  endAt?: string | null;
+  isActive: boolean;
+  conditions: Record<string, unknown>;
+  effects: Record<string, unknown>;
+  usageLimit?: number | null;
+  perUserLimit?: number | null;
+};
+
+export type PromotionUpdatePayload = Partial<PromotionPayload>;
+
 export type PromotionActiveFilter = 'all' | 'active' | 'inactive';
 
 export type GetPromotionsParams = {

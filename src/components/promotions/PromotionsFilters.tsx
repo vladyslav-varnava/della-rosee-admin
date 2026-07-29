@@ -1,9 +1,11 @@
 'use client';
 
 import { RefObject } from 'react';
+import Link from 'next/link';
 
 import {
   Box,
+  Button,
   CloseButton,
   Flex,
   HStack,
@@ -14,7 +16,7 @@ import {
   Text,
   chakra,
 } from '@chakra-ui/react';
-import { LuSearch } from 'react-icons/lu';
+import { LuPlus, LuSearch } from 'react-icons/lu';
 
 import {
   PROMOTION_TYPES,
@@ -87,6 +89,18 @@ export const PromotionsFilters = ({
           </Box>
 
           <HStack gap={3} wrap="wrap">
+            <Button
+              asChild
+              bg="della.primary"
+              color="della.text"
+              _hover={{ bg: 'della.primaryHover' }}
+            >
+              <Link href="/promotions/create">
+                <LuPlus />
+                Створити акцію
+              </Link>
+            </Button>
+
             <SegmentGroup.Root
               value={activeFilter}
               onValueChange={(details) => {
