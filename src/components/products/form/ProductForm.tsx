@@ -386,6 +386,64 @@ export const ProductForm = ({ product }: Props) => {
             </ProductFormSection>
 
             <ProductFormSection
+              title="Контент сторінки товару"
+              description="Розгорнуті блоки для PDP з підтримкою форматування."
+            >
+              <Stack gap={5}>
+                <Controller
+                  control={control}
+                  name="description"
+                  render={({ field }) => (
+                    <Field.Root>
+                      <Field.Label>Опис</Field.Label>
+                      <ReactQuill
+                        className="product-form-rich-editor"
+                        theme="snow"
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                      />
+                    </Field.Root>
+                  )}
+                />
+
+                <Controller
+                  control={control}
+                  name="syllable"
+                  render={({ field }) => (
+                    <Field.Root>
+                      <Field.Label>Склад</Field.Label>
+                      <ReactQuill
+                        className="product-form-rich-editor"
+                        theme="snow"
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                      />
+                    </Field.Root>
+                  )}
+                />
+
+                <Controller
+                  control={control}
+                  name="howToUse"
+                  render={({ field }) => (
+                    <Field.Root>
+                      <Field.Label>Як використовувати</Field.Label>
+                      <ReactQuill
+                        className="product-form-rich-editor"
+                        theme="snow"
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                      />
+                    </Field.Root>
+                  )}
+                />
+              </Stack>
+            </ProductFormSection>
+
+            <ProductFormSection
               title="Фільтри та категорії"
               description="Оберіть значення, які будуть використовуватись у фільтрах, меню та картках продукту."
             >
