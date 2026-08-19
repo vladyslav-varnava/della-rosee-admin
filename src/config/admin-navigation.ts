@@ -1,15 +1,18 @@
 import type { IconType } from 'react-icons';
 import {
   LuBadgePercent,
+  LuCalendarDays,
   LuClipboardList,
   LuLeaf,
   LuMessageSquare,
   LuPackage,
+  LuShoppingBag,
   LuStethoscope,
   LuStore,
   LuUsers,
-  LuUserRound,
 } from 'react-icons/lu';
+
+export type AdminNavigationSection = 'shop' | 'clinic';
 
 export type AdminNavItem = {
   href: string;
@@ -19,13 +22,23 @@ export type AdminNavItem = {
 };
 
 export type AdminNavGroup = {
+  id: AdminNavigationSection;
   title: string;
+  sidebarTitle: string;
+  sidebarDescription: string;
+  switchLabel: string;
+  icon: IconType;
   items: AdminNavItem[];
 };
 
 export const adminNavigationGroups: AdminNavGroup[] = [
   {
+    id: 'shop',
     title: 'Магазин',
+    sidebarTitle: 'Della Rosee Shop',
+    sidebarDescription: 'Адмінка магазину',
+    switchLabel: 'Магазин',
+    icon: LuShoppingBag,
     items: [
       {
         href: '/orders',
@@ -72,19 +85,42 @@ export const adminNavigationGroups: AdminNavGroup[] = [
     ],
   },
   {
+    id: 'clinic',
     title: 'Клініка',
+    sidebarTitle: 'Della Rosee Clinic',
+    sidebarDescription: 'Адмінка клініки',
+    switchLabel: 'Клініка',
+    icon: LuStethoscope,
     items: [
       {
-        href: '/doctors',
-        label: 'Лікарі',
-        description: 'Профілі лікарів клініки',
-        icon: LuUserRound,
+        href: '/crm/calendar',
+        label: 'Календар',
+        description: 'Записи клієнтів і розклад прийомів',
+        icon: LuCalendarDays,
       },
       {
-        href: '/procedures',
-        label: 'Процедури',
-        description: 'Напрямки, процедури та записи',
+        href: '/crm/clients',
+        label: 'Клієнти',
+        description: 'Картки клієнтів, контакти та історія записів',
+        icon: LuUsers,
+      },
+      {
+        href: '/crm/services',
+        label: 'Послуги',
+        description: 'Лікарі, категорії та процедури клініки',
         icon: LuStethoscope,
+      },
+      {
+        href: '/crm/equipment',
+        label: 'Обладнання',
+        description: 'Типи обладнання, ресурси та доступність',
+        icon: LuPackage,
+      },
+      {
+        href: '/crm/schedule',
+        label: 'Графіки',
+        description: 'Робочі години лікарів і винятки',
+        icon: LuClipboardList,
       },
     ],
   },

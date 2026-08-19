@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useSyncExternalStore } from 'react';
 import NextLink from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -24,6 +24,7 @@ import {
 } from 'react-icons/lu';
 
 import {
+  AdminNavigationSection,
   adminNavigation,
   adminNavigationGroups,
 } from '@/config/admin-navigation';
@@ -33,6 +34,61 @@ import { AdminNavLink } from './AdminNavLink';
 
 type Props = {
   children: ReactNode;
+};
+
+const DEFAULT_NAVIGATION_SECTION: AdminNavigationSection = 'shop';
+const NAVIGATION_SECTION_STORAGE_KEY = 'della-admin-navigation-section';
+const NAVIGATION_SECTION_CHANGE_EVENT = 'della-admin-navigation-section-change';
+
+const getNavigationGroupBySection = (section: AdminNavigationSection) => {
+  return adminNavigationGroups.find((group) => group.id === section);
+};
+
+const isNavigationSection = (
+  value: string | null,
+): value is AdminNavigationSection => {
+  return adminNavigationGroups.some((group) => group.id === value);
+};
+
+const getNavigationGroupByPath = (pathname: string) => {
+  return adminNavigationGroups.find((group) =>
+    group.items.some(
+      (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
+    ),
+  );
+};
+
+const getSavedNavigationSection = (): AdminNavigationSection | null => {
+  if (typeof window !== 'undefined') {
+    const savedSection = window.localStorage.getItem(
+      NAVIGATION_SECTION_STORAGE_KEY,
+    );
+
+    if (isNavigationSection(savedSection)) {
+      return savedSection;
+    }
+  }
+
+  return null;
+};
+
+const subscribeToNavigationSection = (callback: () => void) => {
+  window.addEventListener('storage', callback);
+  window.addEventListener(NAVIGATION_SECTION_CHANGE_EVENT, callback);
+
+  return () => {
+    window.removeEventListener('storage', callback);
+    window.removeEventListener(NAVIGATION_SECTION_CHANGE_EVENT, callback);
+  };
+};
+
+const saveNavigationSection = (section: AdminNavigationSection) => {
+  try {
+    window.localStorage.setItem(NAVIGATION_SECTION_STORAGE_KEY, section);
+    window.dispatchEvent(new Event(NAVIGATION_SECTION_CHANGE_EVENT));
+  } catch {
+    return;
+  }
 };
 
 const getCurrentPage = (pathname: string) => {
@@ -47,6 +103,28 @@ export const AdminShell = ({ children }: Props) => {
   const { signOut, isSignOutLoading } = useAuth();
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const savedNavigationSection = useSyncExternalStore(
+    subscribeToNavigationSection,
+    getSavedNavigationSection,
+    () => null,
+  );
+  const activeNavigationSection =
+    savedNavigationSection ??
+    getNavigationGroupByPath(pathname)?.id ??
+    DEFAULT_NAVIGATION_SECTION;
+
+  const activeNavigationGroup =
+    getNavigationGroupBySection(activeNavigationSection) ??
+    adminNavigationGroups[0];
+  const nextNavigationGroup =
+    adminNavigationGroups.find(
+      (group) => group.id !== activeNavigationGroup.id,
+    ) ?? activeNavigationGroup;
+  const NextNavigationIcon = nextNavigationGroup.icon;
+
+  const toggleNavigationSection = () => {
+    saveNavigationSection(nextNavigationGroup.id);
+  };
 
   return (
     <Flex minH="100vh" bg="della.backgroundSecondary">
@@ -74,11 +152,11 @@ export const AdminShell = ({ children }: Props) => {
           {!isSidebarCollapsed && (
             <Box minW={0}>
               <Text fontSize="xl" fontWeight="900" color="della.text">
-                Della Rosee
+                {activeNavigationGroup.sidebarTitle}
               </Text>
 
               <Text mt={1} fontSize="sm" color="gray.500">
-                Admin panel
+                {activeNavigationGroup.sidebarDescription}
               </Text>
             </Box>
           )}
@@ -95,6 +173,25 @@ export const AdminShell = ({ children }: Props) => {
           </IconButton>
         </Flex>
 
+        <Box px={isSidebarCollapsed ? 3 : 4} pb={4}>
+          <Button
+            w="100%"
+            size="sm"
+            variant="outline"
+            aria-label={`Навігація: ${nextNavigationGroup.title}`}
+            title={
+              isSidebarCollapsed
+                ? `Навігація: ${nextNavigationGroup.switchLabel}`
+                : undefined
+            }
+            onClick={toggleNavigationSection}
+          >
+            <NextNavigationIcon />
+            {!isSidebarCollapsed &&
+              `Навігація: ${nextNavigationGroup.switchLabel}`}
+          </Button>
+        </Box>
+
         <VStack
           align="stretch"
           gap={isSidebarCollapsed ? 3 : 6}
@@ -102,35 +199,33 @@ export const AdminShell = ({ children }: Props) => {
           flex={1}
           overflowY="auto"
         >
-          {adminNavigationGroups.map((group) => (
-            <Box key={group.title}>
-              {!isSidebarCollapsed ? (
-                <Text
-                  px={3}
-                  mb={2}
-                  fontSize="xs"
-                  fontWeight="800"
-                  color="gray.400"
-                  letterSpacing="0.12em"
-                  textTransform="uppercase"
-                >
-                  {group.title}
-                </Text>
-              ) : (
-                <Box h="1px" mx={3} mb={2} bg="blackAlpha.100" aria-hidden />
-              )}
+          <Box>
+            {!isSidebarCollapsed ? (
+              <Text
+                px={3}
+                mb={2}
+                fontSize="xs"
+                fontWeight="800"
+                color="gray.400"
+                letterSpacing="0.12em"
+                textTransform="uppercase"
+              >
+                {activeNavigationGroup.title}
+              </Text>
+            ) : (
+              <Box h="1px" mx={3} mb={2} bg="blackAlpha.100" aria-hidden />
+            )}
 
-              <Stack gap={1}>
-                {group.items.map((item) => (
-                  <AdminNavLink
-                    key={item.href}
-                    item={item}
-                    collapsed={isSidebarCollapsed}
-                  />
-                ))}
-              </Stack>
-            </Box>
-          ))}
+            <Stack gap={1}>
+              {activeNavigationGroup.items.map((item) => (
+                <AdminNavLink
+                  key={item.href}
+                  item={item}
+                  collapsed={isSidebarCollapsed}
+                />
+              ))}
+            </Stack>
+          </Box>
         </VStack>
 
         <Box
@@ -168,27 +263,39 @@ export const AdminShell = ({ children }: Props) => {
             <Flex align="center" justify="space-between" gap={4} mb={4}>
               <Box>
                 <Text fontWeight="900" color="della.text">
-                  Della Rosee
+                  {activeNavigationGroup.sidebarTitle}
                 </Text>
 
                 <Text fontSize="sm" color="gray.500">
-                  Admin panel
+                  {activeNavigationGroup.sidebarDescription}
                 </Text>
               </Box>
 
-              <Button
-                size="sm"
-                variant="outline"
-                loading={isSignOutLoading}
-                onClick={() => signOut()}
-              >
-                <LuLogOut />
-                Вийти
-              </Button>
+              <HStack gap={2}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  aria-label={`Навігація: ${nextNavigationGroup.title}`}
+                  onClick={toggleNavigationSection}
+                >
+                  <NextNavigationIcon />
+                  {nextNavigationGroup.switchLabel}
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  loading={isSignOutLoading}
+                  onClick={() => signOut()}
+                >
+                  <LuLogOut />
+                  Вийти
+                </Button>
+              </HStack>
             </Flex>
 
             <HStack gap={2} overflowX="auto" pb={1}>
-              {adminNavigation.map((item) => (
+              {activeNavigationGroup.items.map((item) => (
                 <AdminNavLink key={item.href} item={item} compact />
               ))}
             </HStack>
