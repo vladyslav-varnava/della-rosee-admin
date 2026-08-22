@@ -53,6 +53,7 @@ export const crmService = {
     doctorId: number;
     date: string;
     stepMinutes?: number;
+    durationMinutes?: number;
   }) => {
     return apiClient.get<CrmAvailability>('/crm/availability', { params });
   },

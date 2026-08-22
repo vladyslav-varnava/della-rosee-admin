@@ -157,6 +157,23 @@ export type CrmAppointmentEquipment = {
   equipment: CrmEquipment;
 };
 
+export type CrmAppointmentProcedure = {
+  id: number;
+  appointmentId: number;
+  procedureId: number;
+  order: number;
+  durationMinutes?: number | null;
+  price?: number | null;
+  procedure: CrmProcedure;
+};
+
+export type CrmAppointmentDoctor = {
+  id: number;
+  appointmentId: number;
+  doctorId: number;
+  doctor: CrmDoctor;
+};
+
 export type CrmAppointment = {
   id: number;
   procedureId: number;
@@ -179,6 +196,8 @@ export type CrmAppointment = {
   updatedAt: string;
   procedure?: CrmProcedure;
   doctor?: CrmDoctor;
+  procedures?: CrmAppointmentProcedure[];
+  doctors?: CrmAppointmentDoctor[];
   client?: CrmClient | null;
   equipment?: CrmAppointmentEquipment[];
 };
@@ -278,6 +297,9 @@ export type CrmScheduleExceptionPayload = {
 export type CrmAppointmentPayload = {
   procedureId: number;
   doctorId: number;
+  procedureIds?: number[];
+  doctorIds?: number[];
+  customDurationMinutes?: number;
   clientId?: number;
   createdById?: number;
   startAt: string;

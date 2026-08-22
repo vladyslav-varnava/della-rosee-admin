@@ -24,7 +24,6 @@ import {
   IconButton,
   Input,
   Portal,
-  SegmentGroup,
   SimpleGrid,
   Spinner,
   Stack,
@@ -75,6 +74,8 @@ import {
 
 type CrmView = 'calendar' | 'clients' | 'catalog' | 'equipment' | 'schedule';
 type CalendarMode = 'week' | 'day';
+type CalendarScaleMinutes = 5 | 10 | 15 | 30;
+type SlotCreateMode = 'choice' | 'appointment' | 'exception';
 
 type SelectOption = {
   label: string;
@@ -82,14 +83,26 @@ type SelectOption = {
 };
 
 type DialogProps = {
-  trigger: ReactNode;
+  trigger?: ReactNode;
   isLoading?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+};
+
+type CalendarSlotDraft = {
+  startAt: Date;
+  endAt: Date;
+  doctorId?: number;
 };
 
 type AppointmentFormValues = {
-  procedureId: string;
-  doctorId: string;
+  procedureIds: number[];
+  doctorIds: number[];
+  procedureSearch: string;
+  doctorSearch: string;
   clientId: string;
+  clientSearch: string;
+  customDurationMinutes: string;
   startAt: string;
   clientFirstName: string;
   clientLastName: string;
@@ -231,9 +244,15 @@ const weekDays = [
 const shortWeekDays = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 const monthWeekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
 
-const calendarModeItems = [
+const calendarModeItems: Array<{ value: CalendarMode; label: string }> = [
   { value: 'week', label: 'Тиждень' },
   { value: 'day', label: 'День' },
+];
+const calendarScaleItems: SelectOption[] = [
+  { value: '5', label: '5 хв' },
+  { value: '10', label: '10 хв' },
+  { value: '15', label: '15 хв' },
+  { value: '30', label: '30 хв' },
 ];
 
 const crmViewMeta: Record<CrmView, { title: string; description: string }> = {
@@ -277,14 +296,34 @@ const crmErrorTranslations: Array<[RegExp, string]> = [
   [/Procedure with id \d+ not found/i, 'Процедуру не знайдено.'],
   [/Procedure is not active/i, 'Процедура неактивна.'],
   [
+    /Cannot delete procedure because appointments already exist/i,
+    'Неможливо видалити процедуру, оскільки для неї вже створено запис. Спершу скасуйте або видаліть повʼязані записи.',
+  ],
+  [
+    /Foreign key constraint failed/i,
+    'Неможливо видалити, оскільки цей запис уже використовується в інших даних.',
+  ],
+  [
     /Procedure duration must be greater than 0/i,
     'У цієї процедури некоректна тривалість: у полі “Тривалість, хв” вкажіть число більше 0 і збережіть процедуру.',
+  ],
+  [
+    /Appointment duration must be greater than 0/i,
+    'Тривалість запису має бути більшою за 0 хв.',
+  ],
+  [
+    /Select at least one procedure and doctor/i,
+    'Оберіть хоча б одну процедуру та одного лікаря.',
   ],
   [/Doctor with id \d+ not found/i, 'Лікаря не знайдено.'],
   [/Doctor is not active$/i, 'Лікар неактивний.'],
   [
     /Doctor is not assigned to this procedure/i,
     'Лікар не привʼязаний до цієї процедури.',
+  ],
+  [
+    /Doctor is not assigned to selected procedures/i,
+    'Один із лікарів не привʼязаний до вибраних процедур.',
   ],
   [
     /Doctor is not active for this procedure/i,
@@ -385,7 +424,7 @@ const getResponseErrorMessages = (error: unknown) => {
 };
 
 const isGenericErrorMessage = (message: string) => {
-  return /^(Request failed with status code \d+|Bad Request|Not Found|Conflict)$/i.test(
+  return /^(Request failed with status code \d+|Bad Request|Not Found|Conflict|Internal server error|Something went wrong)$/i.test(
     message.trim(),
   );
 };
@@ -453,6 +492,13 @@ const toDateTimeLocalValue = (value?: string | Date) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
+const toTimeInputValue = (value: Date) => {
+  const hours = String(value.getHours()).padStart(2, '0');
+  const minutes = String(value.getMinutes()).padStart(2, '0');
+
+  return `${hours}:${minutes}`;
+};
+
 const toIsoDateTime = (value: string) => {
   return new Date(value).toISOString();
 };
@@ -470,6 +516,13 @@ const startOfWeek = (date: Date) => {
 const addDays = (date: Date, days: number) => {
   const next = new Date(date);
   next.setDate(next.getDate() + days);
+
+  return next;
+};
+
+const addMinutes = (date: Date, minutes: number) => {
+  const next = new Date(date);
+  next.setMinutes(next.getMinutes() + minutes);
 
   return next;
 };
@@ -514,6 +567,13 @@ const getAppointmentOffset = (appointment: CrmAppointment) => {
     (startAt.getHours() - CALENDAR_START_HOUR) * 60 + startAt.getMinutes();
 
   return Math.max(0, (minutes / 60) * CALENDAR_HOUR_HEIGHT);
+};
+
+const getCalendarSlotStart = (day: Date, minutesFromStart: number) => {
+  const next = new Date(day);
+  next.setHours(CALENDAR_START_HOUR, minutesFromStart, 0, 0);
+
+  return next;
 };
 
 const getAppointmentHeight = (appointment: CrmAppointment) => {
@@ -589,6 +649,26 @@ const getAppointmentClientName = (appointment: CrmAppointment) => {
     .join(' ');
 };
 
+const getAppointmentProcedureNames = (appointment: CrmAppointment) => {
+  const names =
+    appointment.procedures
+      ?.map((item) => item.procedure?.title)
+      .filter(Boolean) ?? [];
+
+  return names.length
+    ? names.join(', ')
+    : (appointment.procedure?.title ?? `#${appointment.procedureId}`);
+};
+
+const getAppointmentDoctorNames = (appointment: CrmAppointment) => {
+  const names =
+    appointment.doctors?.map((item) => item.doctor?.name).filter(Boolean) ?? [];
+
+  return names.length
+    ? names.join(', ')
+    : (appointment.doctor?.name ?? `Лікар #${appointment.doctorId}`);
+};
+
 const slugify = (value: string) => {
   return value
     .trim()
@@ -610,6 +690,18 @@ const toRequiredId = (value: string) => {
   const id = Number(value);
 
   return Number.isInteger(id) && id > 0 ? id : undefined;
+};
+
+const toCalendarScaleMinutes = (value: string): CalendarScaleMinutes => {
+  const scale = Number(value);
+
+  return scale === 5 || scale === 10 || scale === 15 || scale === 30
+    ? scale
+    : 15;
+};
+
+const matchesSearch = (value: string, search: string) => {
+  return value.toLowerCase().includes(search.trim().toLowerCase());
 };
 
 const updateFormValue =
@@ -635,6 +727,8 @@ const useCrmMutation = <TData, TVariables>(
   messages: {
     success: string;
     error: string;
+    errorDescription?: string;
+    preferErrorDescription?: boolean;
   },
 ) => {
   const queryClient = useQueryClient();
@@ -644,7 +738,10 @@ const useCrmMutation = <TData, TVariables>(
     onError: (error) => {
       toaster.create({
         title: messages.error,
-        description: getErrorMessage(error),
+        description:
+          messages.preferErrorDescription && messages.errorDescription
+            ? messages.errorDescription
+            : getErrorMessage(error, messages.errorDescription),
         type: 'error',
       });
     },
@@ -705,6 +802,90 @@ const SelectField = ({
   </Field.Root>
 );
 
+const SearchMultiSelectField = ({
+  label,
+  searchValue,
+  placeholder,
+  selectedItems,
+  options,
+  onSearchChange,
+  onToggle,
+}: {
+  label: string;
+  searchValue: string;
+  placeholder: string;
+  selectedItems: Array<{
+    id: number;
+    label: string;
+    detail?: string;
+    disabled?: boolean;
+  }>;
+  options: Array<{
+    id: number;
+    label: string;
+    detail?: string;
+    disabled?: boolean;
+  }>;
+  onSearchChange: (value: string) => void;
+  onToggle: (id: number) => void;
+}) => (
+  <Field.Root>
+    <Field.Label>{label}</Field.Label>
+    <Stack gap={2} mt={2}>
+      <Input
+        value={searchValue}
+        placeholder={placeholder}
+        onChange={(event) => onSearchChange(event.currentTarget.value)}
+      />
+      {selectedItems.length > 0 && (
+        <HStack gap={2} wrap="wrap">
+          {selectedItems.map((item) => (
+            <Button
+              key={item.id}
+              size="xs"
+              variant="outline"
+              colorPalette={item.disabled ? 'orange' : undefined}
+              onClick={() => onToggle(item.id)}
+            >
+              {item.label}
+              <LuX />
+            </Button>
+          ))}
+        </HStack>
+      )}
+      <Stack gap={2} maxH="184px" overflowY="auto">
+        {options.map((item) => (
+          <Button
+            key={item.id}
+            variant="outline"
+            justifyContent="flex-start"
+            h="auto"
+            py={2}
+            colorPalette={item.disabled ? 'orange' : undefined}
+            onClick={() => onToggle(item.id)}
+          >
+            <Box textAlign="left" minW={0}>
+              <Text fontWeight="900" lineClamp={1}>
+                {item.label}
+              </Text>
+              {item.detail && (
+                <Text fontSize="xs" color="gray.500" lineClamp={1}>
+                  {item.detail}
+                </Text>
+              )}
+            </Box>
+          </Button>
+        ))}
+        {searchValue && options.length === 0 && (
+          <Text fontSize="sm" color="gray.500">
+            Нічого не знайдено.
+          </Text>
+        )}
+      </Stack>
+    </Stack>
+  </Field.Root>
+);
+
 const DialogShell = ({
   title,
   description,
@@ -718,7 +899,7 @@ const DialogShell = ({
 }: {
   title: string;
   description?: string;
-  trigger: ReactNode;
+  trigger?: ReactNode;
   open: boolean;
   maxW?: string | Record<string, string>;
   children: ReactNode;
@@ -731,7 +912,7 @@ const DialogShell = ({
     open={open}
     onOpenChange={({ open: nextOpen }) => onOpenChange(nextOpen)}
   >
-    <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>
+    {trigger && <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>}
     <Portal>
       <Dialog.Backdrop />
       <Dialog.Positioner>
@@ -820,6 +1001,138 @@ const CrmSwitch = ({
   </Switch.Root>
 );
 
+const CalendarModeToggle = ({
+  value,
+  onChange,
+}: {
+  value: CalendarMode;
+  onChange: (value: CalendarMode) => void;
+}) => (
+  <HStack
+    w="fit-content"
+    maxW="100%"
+    gap={1}
+    p={1}
+    bg="gray.100"
+    border="1px solid"
+    borderColor="blackAlpha.100"
+    borderRadius="lg"
+    overflowX="auto"
+  >
+    {calendarModeItems.map((item) => {
+      const isSelected = value === item.value;
+
+      return (
+        <Button
+          key={item.value}
+          type="button"
+          size="sm"
+          h="32px"
+          minW="88px"
+          px={4}
+          flexShrink={0}
+          variant="ghost"
+          bg={isSelected ? 'white' : 'transparent'}
+          color="della.text"
+          boxShadow={isSelected ? 'sm' : undefined}
+          border="1px solid"
+          borderColor={isSelected ? 'blackAlpha.200' : 'transparent'}
+          aria-pressed={isSelected}
+          _hover={{ bg: isSelected ? 'white' : 'blackAlpha.100' }}
+          onClick={() => onChange(item.value)}
+        >
+          {item.label}
+        </Button>
+      );
+    })}
+  </HStack>
+);
+
+const SlotCreateChoiceDialog = ({
+  slot,
+  open,
+  onOpenChange,
+  onSelectMode,
+}: {
+  slot?: CalendarSlotDraft;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSelectMode: (mode: Exclude<SlotCreateMode, 'choice'>) => void;
+}) => (
+  <Dialog.Root
+    lazyMount
+    open={open}
+    onOpenChange={({ open: nextOpen }) => onOpenChange(nextOpen)}
+  >
+    <Portal>
+      <Dialog.Backdrop />
+      <Dialog.Positioner>
+        <Dialog.Content
+          maxW={{ base: 'calc(100% - 24px)', md: '420px' }}
+          borderRadius="2xl"
+        >
+          <Dialog.Header borderBottom="1px solid" borderColor="blackAlpha.100">
+            <Box>
+              <Dialog.Title color="della.text">Створити у слоті</Dialog.Title>
+              <Text mt={1} color="gray.500" fontSize="sm">
+                {slot
+                  ? `${formatDate(slot.startAt)}, ${toTimeInputValue(
+                      slot.startAt,
+                    )} - ${toTimeInputValue(slot.endAt)}`
+                  : 'Оберіть тип події календаря.'}
+              </Text>
+            </Box>
+          </Dialog.Header>
+          <Dialog.Body p={5}>
+            <SimpleGrid columns={{ base: 1, sm: 2 }} gap={3}>
+              <Button
+                h="74px"
+                variant="outline"
+                justifyContent="flex-start"
+                onClick={() => onSelectMode('appointment')}
+              >
+                <LuPlus />
+                <Box textAlign="left">
+                  <Text fontWeight="900">Запис</Text>
+                  <Text fontSize="xs" color="gray.500">
+                    Клієнт і процедура
+                  </Text>
+                </Box>
+              </Button>
+              <Button
+                h="74px"
+                variant="outline"
+                justifyContent="flex-start"
+                onClick={() => onSelectMode('exception')}
+              >
+                <LuCalendarDays />
+                <Box textAlign="left">
+                  <Text fontWeight="900">Подія</Text>
+                  <Text fontSize="xs" color="gray.500">
+                    Перерва або інше
+                  </Text>
+                </Box>
+              </Button>
+            </SimpleGrid>
+          </Dialog.Body>
+          <Dialog.CloseTrigger asChild>
+            <IconButton
+              aria-label="Закрити"
+              position="absolute"
+              top={4}
+              right={4}
+              size="sm"
+              variant="ghost"
+            >
+              <LuX />
+            </IconButton>
+          </Dialog.CloseTrigger>
+        </Dialog.Content>
+      </Dialog.Positioner>
+    </Portal>
+  </Dialog.Root>
+);
+
 const AppointmentDialog = ({
   appointment,
   doctors,
@@ -827,8 +1140,11 @@ const AppointmentDialog = ({
   clients,
   initialStartAt,
   initialDoctorId,
+  availabilityStepMinutes = 15,
   trigger,
+  open: controlledOpen,
   isLoading,
+  onOpenChange: controlledOnOpenChange,
   onSubmit,
 }: DialogProps & {
   appointment?: CrmAppointment;
@@ -837,34 +1153,69 @@ const AppointmentDialog = ({
   clients: CrmClient[];
   initialStartAt?: Date;
   initialDoctorId?: number;
+  availabilityStepMinutes?: CalendarScaleMinutes;
   onSubmit: (payload: CrmAppointmentPayload) => Promise<unknown>;
 }) => {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [values, setValues] = useState<AppointmentFormValues>(() =>
     getAppointmentInitialValues(appointment, initialStartAt, initialDoctorId),
   );
+  const open = controlledOpen ?? internalOpen;
+  const setDialogOpen = (nextOpen: boolean) => {
+    if (controlledOpen === undefined) {
+      setInternalOpen(nextOpen);
+    }
 
-  const doctorOptions = doctors.map((doctor) => ({
-    value: String(doctor.id),
-    label: doctor.name,
-  }));
-  const procedureOptions = procedures.map((procedure) => ({
-    value: String(procedure.id),
-    label: `${procedure.title} · ${procedure.time} хв${
-      procedure.isActive ? '' : ' · неактивна'
-    }`,
-  }));
-  const selectedProcedure = procedures.find(
-    (procedure) => String(procedure.id) === values.procedureId,
+    controlledOnOpenChange?.(nextOpen);
+  };
+
+  const selectedProcedures = procedures.filter((procedure) =>
+    values.procedureIds.includes(procedure.id),
   );
-  const clientOptions = clients.map((client) => ({
-    value: String(client.id),
-    label: `${getClientName(client)} · ${client.phone}`,
-  }));
-  const selectedProcedureId = toRequiredId(values.procedureId);
-  const selectedDoctorId = toRequiredId(values.doctorId);
+  const selectedDoctors = doctors.filter((doctor) =>
+    values.doctorIds.includes(doctor.id),
+  );
+  const selectedClient = clients.find(
+    (client) => String(client.id) === values.clientId,
+  );
+  const filteredProcedures = procedures
+    .filter(
+      (procedure) =>
+        !values.procedureIds.includes(procedure.id) &&
+        matchesSearch(
+          `${procedure.title} ${procedure.slug ?? ''} ${procedure.category?.title ?? ''}`,
+          values.procedureSearch,
+        ),
+    )
+    .slice(0, 8);
+  const filteredDoctors = doctors
+    .filter(
+      (doctor) =>
+        !values.doctorIds.includes(doctor.id) &&
+        matchesSearch(doctor.name, values.doctorSearch),
+    )
+    .slice(0, 8);
+  const filteredClients = clients
+    .filter((client) =>
+      matchesSearch(
+        `${getClientName(client)} ${client.phone}`,
+        values.clientSearch,
+      ),
+    )
+    .slice(0, 8);
+  const selectedProcedureId = values.procedureIds[0];
+  const selectedDoctorId = values.doctorIds[0];
+  const selectedProcedure = selectedProcedures[0];
   const availabilityDate = values.startAt.slice(0, 10);
   const selectedStartAt = values.startAt;
+  const calculatedDurationMinutes = selectedProcedures.reduce(
+    (total, procedure) =>
+      total +
+      procedure.time +
+      procedure.preparationMinutes +
+      procedure.cleanupMinutes,
+    0,
+  );
   const canLoadAvailability =
     open &&
     Boolean(
@@ -880,6 +1231,8 @@ const AppointmentDialog = ({
       selectedProcedureId,
       selectedDoctorId,
       availabilityDate,
+      availabilityStepMinutes,
+      values.customDurationMinutes,
     ],
     queryFn: () => {
       if (!selectedProcedureId || !selectedDoctorId) {
@@ -890,7 +1243,8 @@ const AppointmentDialog = ({
         procedureId: selectedProcedureId,
         doctorId: selectedDoctorId,
         date: availabilityDate,
-        stepMinutes: 15,
+        stepMinutes: availabilityStepMinutes,
+        durationMinutes: toOptionalNumber(values.customDurationMinutes),
       });
     },
     enabled: canLoadAvailability,
@@ -910,7 +1264,7 @@ const AppointmentDialog = ({
       reset();
     }
 
-    setOpen(nextOpen);
+    setDialogOpen(nextOpen);
   };
 
   const selectClient = (clientId: string) => {
@@ -919,32 +1273,63 @@ const AppointmentDialog = ({
     setValues((current) => ({
       ...current,
       clientId,
+      clientSearch: client ? `${getClientName(client)} · ${client.phone}` : '',
       clientFirstName: client?.firstName ?? current.clientFirstName,
       clientLastName: client?.lastName ?? current.clientLastName,
       clientPhone: client?.phone ?? current.clientPhone,
       clientEmail: client?.email ?? current.clientEmail,
     }));
   };
+  const clearClient = () => {
+    setValues((current) => ({
+      ...current,
+      clientId: '',
+      clientSearch: '',
+      clientFirstName: '',
+      clientLastName: '',
+      clientPhone: '',
+      clientEmail: '',
+    }));
+  };
+  const toggleProcedure = (procedureId: number) => {
+    setValues((current) => ({
+      ...current,
+      procedureIds: current.procedureIds.includes(procedureId)
+        ? current.procedureIds.filter((id) => id !== procedureId)
+        : [...current.procedureIds, procedureId],
+      procedureSearch: '',
+    }));
+  };
+  const toggleDoctor = (doctorId: number) => {
+    setValues((current) => ({
+      ...current,
+      doctorIds: current.doctorIds.includes(doctorId)
+        ? current.doctorIds.filter((id) => id !== doctorId)
+        : [...current.doctorIds, doctorId],
+      doctorSearch: '',
+    }));
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLElement>) => {
     event.preventDefault();
 
-    const procedureId = toRequiredId(values.procedureId);
-    const doctorId = toRequiredId(values.doctorId);
+    const procedureId = values.procedureIds[0];
+    const doctorId = values.doctorIds[0];
 
-    if (!procedureId || !doctorId) {
+    if (!values.procedureIds.length || !values.doctorIds.length) {
       toaster.create({
         title: 'Заповніть запис',
-        description: 'Оберіть процедуру та лікаря перед створенням запису.',
+        description:
+          'Оберіть хоча б одну процедуру та одного лікаря перед створенням запису.',
         type: 'error',
       });
       return;
     }
 
-    if (selectedProcedure?.isActive === false) {
+    if (selectedProcedures.some((procedure) => !procedure.isActive)) {
       toaster.create({
         title: 'Процедура неактивна',
-        description: 'Активуйте процедуру перед створенням запису.',
+        description: 'Активуйте всі вибрані процедури перед створенням запису.',
         type: 'error',
       });
       return;
@@ -953,6 +1338,9 @@ const AppointmentDialog = ({
     await onSubmit({
       procedureId,
       doctorId,
+      procedureIds: values.procedureIds,
+      doctorIds: values.doctorIds,
+      customDurationMinutes: toOptionalNumber(values.customDurationMinutes),
       clientId: toOptionalNumber(values.clientId),
       startAt: toIsoDateTime(values.startAt),
       clientFirstName: values.clientFirstName.trim(),
@@ -965,7 +1353,7 @@ const AppointmentDialog = ({
       source: values.source,
     });
 
-    setOpen(false);
+    setDialogOpen(false);
   };
 
   return (
@@ -978,28 +1366,57 @@ const AppointmentDialog = ({
       onOpenChange={handleOpenChange}
       onSubmit={handleSubmit}
       footer={
-        <DialogFooter isLoading={isLoading} onCancel={() => setOpen(false)} />
+        <DialogFooter
+          isLoading={isLoading}
+          onCancel={() => setDialogOpen(false)}
+        />
       }
     >
       <Stack gap={5}>
-        <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-          <SelectField
-            label="Процедура"
-            value={values.procedureId}
-            options={procedureOptions}
-            required
-            onChange={(procedureId) =>
-              setValues((current) => ({ ...current, procedureId }))
+        <SimpleGrid columns={{ base: 1, lg: 2 }} gap={4}>
+          <SearchMultiSelectField
+            label="Процедури"
+            searchValue={values.procedureSearch}
+            placeholder="Пошук процедури"
+            selectedItems={selectedProcedures.map((procedure) => ({
+              id: procedure.id,
+              label: procedure.title,
+              detail: `${procedure.time} хв · ${procedure.price} грн`,
+              disabled: !procedure.isActive,
+            }))}
+            options={filteredProcedures.map((procedure) => ({
+              id: procedure.id,
+              label: procedure.title,
+              detail: `${procedure.category?.title ?? 'Без категорії'} · ${
+                procedure.time
+              } хв${procedure.isActive ? '' : ' · неактивна'}`,
+              disabled: !procedure.isActive,
+            }))}
+            onSearchChange={(procedureSearch) =>
+              setValues((current) => ({ ...current, procedureSearch }))
             }
+            onToggle={toggleProcedure}
           />
-          <SelectField
-            label="Лікар"
-            value={values.doctorId}
-            options={doctorOptions}
-            required
-            onChange={(doctorId) =>
-              setValues((current) => ({ ...current, doctorId }))
+          <SearchMultiSelectField
+            label="Лікарі"
+            searchValue={values.doctorSearch}
+            placeholder="Пошук лікаря"
+            selectedItems={selectedDoctors.map((doctor) => ({
+              id: doctor.id,
+              label: doctor.name,
+              detail: doctor.isActive ? 'Активний' : 'Неактивний',
+              disabled: !doctor.isActive,
+            }))}
+            options={filteredDoctors.map((doctor) => ({
+              id: doctor.id,
+              label: doctor.name,
+              detail: doctor.isActive ? 'Активний' : 'Неактивний',
+              disabled: !doctor.isActive,
+            }))}
+            onSearchChange={(doctorSearch) =>
+              setValues((current) => ({ ...current, doctorSearch }))
             }
+            onToggle={toggleDoctor}
           />
           <Field.Root required>
             <Field.Label>Початок</Field.Label>
@@ -1009,16 +1426,87 @@ const AppointmentDialog = ({
               onChange={updateFormValue(setValues, 'startAt')}
             />
           </Field.Root>
-          <SelectField
-            label="Клієнт з CRM"
-            value={values.clientId}
-            options={clientOptions}
-            placeholder="Новий або без привʼязки"
-            onChange={selectClient}
-          />
+          <Field.Root>
+            <Field.Label>Кастомна тривалість, хв</Field.Label>
+            <Input
+              type="number"
+              min={1}
+              placeholder={
+                calculatedDurationMinutes
+                  ? `Авто: ${calculatedDurationMinutes} хв`
+                  : 'Автоматично'
+              }
+              value={values.customDurationMinutes}
+              onChange={updateFormValue(setValues, 'customDurationMinutes')}
+            />
+          </Field.Root>
         </SimpleGrid>
 
-        {values.procedureId && selectedProcedure?.isActive === false ? (
+        <Box
+          border="1px solid"
+          borderColor="blackAlpha.100"
+          borderRadius="xl"
+          p={4}
+        >
+          <Stack gap={3}>
+            <Field.Root>
+              <Field.Label>Клієнт</Field.Label>
+              <Input
+                value={values.clientSearch}
+                placeholder="Пошук за імʼям або телефоном"
+                onChange={updateFormValue(setValues, 'clientSearch')}
+              />
+            </Field.Root>
+            {selectedClient ? (
+              <HStack
+                justify="space-between"
+                gap={3}
+                border="1px solid"
+                borderColor="green.200"
+                borderRadius="lg"
+                bg="green.50"
+                p={3}
+              >
+                <Box minW={0}>
+                  <Text fontWeight="900" color="della.text" lineClamp={1}>
+                    {getClientName(selectedClient)}
+                  </Text>
+                  <Text fontSize="sm" color="gray.600" lineClamp={1}>
+                    {selectedClient.phone}
+                  </Text>
+                </Box>
+                <Button size="xs" variant="outline" onClick={clearClient}>
+                  Новий клієнт
+                </Button>
+              </HStack>
+            ) : (
+              values.clientSearch && (
+                <Stack gap={2}>
+                  {filteredClients.map((client) => (
+                    <Button
+                      key={client.id}
+                      variant="outline"
+                      justifyContent="flex-start"
+                      h="auto"
+                      py={2}
+                      onClick={() => selectClient(String(client.id))}
+                    >
+                      <Box textAlign="left">
+                        <Text fontWeight="900">{getClientName(client)}</Text>
+                        <Text fontSize="xs" color="gray.500">
+                          {client.phone}
+                        </Text>
+                      </Box>
+                    </Button>
+                  ))}
+                </Stack>
+              )
+            )}
+          </Stack>
+        </Box>
+
+        {values.procedureIds.length > 0 &&
+        selectedProcedures.some((procedure) => !procedure.isActive) ? (
           <Box
             border="1px solid"
             borderColor="orange.200"
@@ -1094,37 +1582,52 @@ const AppointmentDialog = ({
           )
         )}
 
+        {!values.clientId && (
+          <Box
+            border="1px solid"
+            borderColor="blackAlpha.100"
+            borderRadius="xl"
+            p={4}
+          >
+            <Text mb={3} fontWeight="900" color="della.text">
+              Новий клієнт
+            </Text>
+            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+              <Field.Root required>
+                <Field.Label>Імʼя клієнта</Field.Label>
+                <Input
+                  value={values.clientFirstName}
+                  onChange={updateFormValue(setValues, 'clientFirstName')}
+                />
+              </Field.Root>
+              <Field.Root>
+                <Field.Label>Прізвище</Field.Label>
+                <Input
+                  value={values.clientLastName}
+                  onChange={updateFormValue(setValues, 'clientLastName')}
+                />
+              </Field.Root>
+              <Field.Root required>
+                <Field.Label>Телефон</Field.Label>
+                <Input
+                  value={values.clientPhone}
+                  placeholder="+380..."
+                  onChange={updateFormValue(setValues, 'clientPhone')}
+                />
+              </Field.Root>
+              <Field.Root>
+                <Field.Label>Email</Field.Label>
+                <Input
+                  type="email"
+                  value={values.clientEmail}
+                  onChange={updateFormValue(setValues, 'clientEmail')}
+                />
+              </Field.Root>
+            </SimpleGrid>
+          </Box>
+        )}
+
         <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-          <Field.Root required>
-            <Field.Label>Імʼя клієнта</Field.Label>
-            <Input
-              value={values.clientFirstName}
-              onChange={updateFormValue(setValues, 'clientFirstName')}
-            />
-          </Field.Root>
-          <Field.Root>
-            <Field.Label>Прізвище</Field.Label>
-            <Input
-              value={values.clientLastName}
-              onChange={updateFormValue(setValues, 'clientLastName')}
-            />
-          </Field.Root>
-          <Field.Root required>
-            <Field.Label>Телефон</Field.Label>
-            <Input
-              value={values.clientPhone}
-              placeholder="+380..."
-              onChange={updateFormValue(setValues, 'clientPhone')}
-            />
-          </Field.Root>
-          <Field.Root>
-            <Field.Label>Email</Field.Label>
-            <Input
-              type="email"
-              value={values.clientEmail}
-              onChange={updateFormValue(setValues, 'clientEmail')}
-            />
-          </Field.Root>
           <SelectField
             label="Статус"
             value={values.status}
@@ -1182,13 +1685,25 @@ const getAppointmentInitialValues = (
   initialStartAt?: Date,
   initialDoctorId?: number,
 ): AppointmentFormValues => ({
-  procedureId: appointment?.procedureId ? String(appointment.procedureId) : '',
-  doctorId: appointment?.doctorId
-    ? String(appointment.doctorId)
-    : initialDoctorId
-      ? String(initialDoctorId)
-      : '',
+  procedureIds:
+    appointment?.procedures?.map((item) => item.procedureId) ??
+    (appointment?.procedureId ? [appointment.procedureId] : []),
+  doctorIds:
+    appointment?.doctors?.map((item) => item.doctorId) ??
+    (appointment?.doctorId
+      ? [appointment.doctorId]
+      : initialDoctorId
+        ? [initialDoctorId]
+        : []),
+  procedureSearch: '',
+  doctorSearch: '',
   clientId: appointment?.clientId ? String(appointment.clientId) : '',
+  clientSearch: appointment?.client
+    ? `${getClientName(appointment.client)} · ${appointment.client.phone}`
+    : '',
+  customDurationMinutes: appointment?.durationMinutes
+    ? String(appointment.durationMinutes)
+    : '',
   startAt: toDateTimeLocalValue(appointment?.startAt ?? initialStartAt),
   clientFirstName: appointment?.clientFirstName ?? '',
   clientLastName: appointment?.clientLastName ?? '',
@@ -2195,20 +2710,40 @@ const ScheduleExceptionDialog = ({
   doctors,
   initialDate,
   initialDoctorId,
+  initialStartTime,
+  initialEndTime,
   trigger,
+  open: controlledOpen,
   isLoading,
+  onOpenChange: controlledOnOpenChange,
   onSubmit,
 }: DialogProps & {
   exception?: CrmScheduleException;
   doctors: CrmDoctor[];
   initialDate?: Date;
   initialDoctorId?: number;
+  initialStartTime?: string;
+  initialEndTime?: string;
   onSubmit: (payload: CrmScheduleExceptionPayload) => Promise<unknown>;
 }) => {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [values, setValues] = useState<ScheduleExceptionFormValues>(() =>
-    getScheduleExceptionInitialValues(exception, initialDate, initialDoctorId),
+    getScheduleExceptionInitialValues(
+      exception,
+      initialDate,
+      initialDoctorId,
+      initialStartTime,
+      initialEndTime,
+    ),
   );
+  const open = controlledOpen ?? internalOpen;
+  const setDialogOpen = (nextOpen: boolean) => {
+    if (controlledOpen === undefined) {
+      setInternalOpen(nextOpen);
+    }
+
+    controlledOnOpenChange?.(nextOpen);
+  };
   const doctorOptions = doctors.map((doctor) => ({
     value: String(doctor.id),
     label: doctor.name,
@@ -2221,11 +2756,13 @@ const ScheduleExceptionDialog = ({
           exception,
           initialDate,
           initialDoctorId,
+          initialStartTime,
+          initialEndTime,
         ),
       );
     }
 
-    setOpen(nextOpen);
+    setDialogOpen(nextOpen);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLElement>) => {
@@ -2263,7 +2800,7 @@ const ScheduleExceptionDialog = ({
       reason: toOptionalString(values.reason),
     });
 
-    setOpen(false);
+    setDialogOpen(false);
   };
 
   return (
@@ -2274,7 +2811,10 @@ const ScheduleExceptionDialog = ({
       onOpenChange={handleOpenChange}
       onSubmit={handleSubmit}
       footer={
-        <DialogFooter isLoading={isLoading} onCancel={() => setOpen(false)} />
+        <DialogFooter
+          isLoading={isLoading}
+          onCancel={() => setDialogOpen(false)}
+        />
       }
     >
       <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
@@ -2343,6 +2883,8 @@ const getScheduleExceptionInitialValues = (
   exception?: CrmScheduleException,
   initialDate?: Date,
   initialDoctorId?: number,
+  initialStartTime?: string,
+  initialEndTime?: string,
 ): ScheduleExceptionFormValues => ({
   doctorId: exception?.doctorId
     ? String(exception.doctorId)
@@ -2352,8 +2894,8 @@ const getScheduleExceptionInitialValues = (
   date: exception?.date
     ? exception.date.slice(0, 10)
     : toDateInputValue(initialDate ?? new Date()),
-  startTime: exception?.startTime ?? '13:00',
-  endTime: exception?.endTime ?? '14:00',
+  startTime: exception?.startTime ?? initialStartTime ?? '13:00',
+  endTime: exception?.endTime ?? initialEndTime ?? '14:00',
   type: exception?.type ?? 'BREAK',
   reason: exception?.reason ?? '',
 });
@@ -2474,6 +3016,11 @@ const MonthCalendar = ({
 
 export const CrmDashboard = ({ view = 'calendar' }: { view?: CrmView }) => {
   const [calendarMode, setCalendarMode] = useState<CalendarMode>('week');
+  const [calendarScaleMinutes, setCalendarScaleMinutes] =
+    useState<CalendarScaleMinutes>(15);
+  const [slotDraft, setSlotDraft] = useState<CalendarSlotDraft>();
+  const [slotCreateMode, setSlotCreateMode] =
+    useState<SlotCreateMode>('choice');
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [monthCalendarDate, setMonthCalendarDate] = useState(() =>
     startOfMonth(new Date()),
@@ -2643,6 +3190,9 @@ export const CrmDashboard = ({ view = 'calendar' }: { view?: CrmView }) => {
   const deleteProcedure = useCrmMutation(crmService.deleteProcedure, {
     success: 'Процедуру видалено',
     error: 'Не вдалося видалити процедуру',
+    errorDescription:
+      'Неможливо видалити процедуру, оскільки для неї вже створено запис. Спершу скасуйте або видаліть повʼязані записи.',
+    preferErrorDescription: true,
   });
   const createEquipmentType = useCrmMutation(crmService.createEquipmentType, {
     success: 'Тип обладнання створено',
@@ -2734,6 +3284,14 @@ export const CrmDashboard = ({ view = 'calendar' }: { view?: CrmView }) => {
     setSelectedDate(date);
     setMonthCalendarDate(startOfMonth(date));
   };
+  const openSlotDraft = (draft: CalendarSlotDraft) => {
+    setSlotDraft(draft);
+    setSlotCreateMode('choice');
+  };
+  const closeSlotDraft = () => {
+    setSlotDraft(undefined);
+    setSlotCreateMode('choice');
+  };
 
   if (isInitialLoading) {
     return (
@@ -2748,6 +3306,52 @@ export const CrmDashboard = ({ view = 'calendar' }: { view?: CrmView }) => {
 
   return (
     <Stack gap={5}>
+      {slotDraft && (
+        <>
+          <SlotCreateChoiceDialog
+            slot={slotDraft}
+            open={slotCreateMode === 'choice'}
+            onOpenChange={(nextOpen) => {
+              if (!nextOpen) {
+                closeSlotDraft();
+              }
+            }}
+            onSelectMode={setSlotCreateMode}
+          />
+          <AppointmentDialog
+            doctors={doctors}
+            procedures={procedures}
+            clients={clients}
+            initialStartAt={slotDraft.startAt}
+            initialDoctorId={slotDraft.doctorId}
+            availabilityStepMinutes={calendarScaleMinutes}
+            open={slotCreateMode === 'appointment'}
+            isLoading={createAppointment.isPending}
+            onOpenChange={(nextOpen) => {
+              if (!nextOpen) {
+                closeSlotDraft();
+              }
+            }}
+            onSubmit={(payload) => createAppointment.mutateAsync(payload)}
+          />
+          <ScheduleExceptionDialog
+            doctors={doctors}
+            initialDate={slotDraft.startAt}
+            initialDoctorId={slotDraft.doctorId}
+            initialStartTime={toTimeInputValue(slotDraft.startAt)}
+            initialEndTime={toTimeInputValue(slotDraft.endAt)}
+            open={slotCreateMode === 'exception'}
+            isLoading={createException.isPending}
+            onOpenChange={(nextOpen) => {
+              if (!nextOpen) {
+                closeSlotDraft();
+              }
+            }}
+            onSubmit={(payload) => createException.mutateAsync(payload)}
+          />
+        </>
+      )}
+
       <Box
         bg="white"
         border="1px solid"
@@ -2756,12 +3360,7 @@ export const CrmDashboard = ({ view = 'calendar' }: { view?: CrmView }) => {
         p={{ base: 4, md: 5 }}
         boxShadow="sm"
       >
-        <Flex
-          align={{ base: 'stretch', lg: 'center' }}
-          justify="space-between"
-          direction={{ base: 'column', lg: 'row' }}
-          gap={4}
-        >
+        <Flex align="center" justify="space-between" gap={4}>
           <Box>
             <Text fontSize="xl" fontWeight="900" color="della.text">
               {currentViewMeta.title}
@@ -2771,7 +3370,7 @@ export const CrmDashboard = ({ view = 'calendar' }: { view?: CrmView }) => {
             </Text>
           </Box>
 
-          <HStack gap={3} wrap="wrap">
+          {view !== 'calendar' && (
             <AppointmentDialog
               doctors={doctors}
               procedures={procedures}
@@ -2785,22 +3384,7 @@ export const CrmDashboard = ({ view = 'calendar' }: { view?: CrmView }) => {
                 </Button>
               }
             />
-            {view === 'calendar' && (
-              <ScheduleExceptionDialog
-                doctors={doctors}
-                initialDate={selectedDate}
-                initialDoctorId={toOptionalNumber(doctorFilter)}
-                isLoading={createException.isPending}
-                onSubmit={(payload) => createException.mutateAsync(payload)}
-                trigger={
-                  <Button variant="outline">
-                    <LuCalendarDays />
-                    Нова подія
-                  </Button>
-                }
-              />
-            )}
-          </HStack>
+          )}
         </Flex>
       </Box>
 
@@ -2810,12 +3394,53 @@ export const CrmDashboard = ({ view = 'calendar' }: { view?: CrmView }) => {
           gap={4}
           alignItems="start"
         >
-          <MonthCalendar
-            displayMonth={monthCalendarDate}
-            selectedDate={selectedDate}
-            onDisplayMonthChange={setMonthCalendarDate}
-            onSelectDate={selectCalendarDate}
-          />
+          <Stack gap={3}>
+            <MonthCalendar
+              displayMonth={monthCalendarDate}
+              selectedDate={selectedDate}
+              onDisplayMonthChange={setMonthCalendarDate}
+              onSelectDate={selectCalendarDate}
+            />
+
+            <Box
+              bg="white"
+              border="1px solid"
+              borderColor="blackAlpha.100"
+              borderRadius="2xl"
+              boxShadow="sm"
+              p={3}
+            >
+              <Stack gap={2}>
+                <AppointmentDialog
+                  doctors={doctors}
+                  procedures={procedures}
+                  clients={clients}
+                  isLoading={createAppointment.isPending}
+                  availabilityStepMinutes={calendarScaleMinutes}
+                  onSubmit={(payload) => createAppointment.mutateAsync(payload)}
+                  trigger={
+                    <Button w="100%" bg="della.primary" color="della.text">
+                      <LuPlus />
+                      Новий запис
+                    </Button>
+                  }
+                />
+                <ScheduleExceptionDialog
+                  doctors={doctors}
+                  initialDate={selectedDate}
+                  initialDoctorId={toOptionalNumber(doctorFilter)}
+                  isLoading={createException.isPending}
+                  onSubmit={(payload) => createException.mutateAsync(payload)}
+                  trigger={
+                    <Button w="100%" variant="outline">
+                      <LuCalendarDays />
+                      Нова подія
+                    </Button>
+                  }
+                />
+              </Stack>
+            </Box>
+          </Stack>
 
           <Stack gap={4} minW={0}>
             <Box
@@ -2875,17 +3500,10 @@ export const CrmDashboard = ({ view = 'calendar' }: { view?: CrmView }) => {
                     </Text>
                   </HStack>
 
-                  <SegmentGroup.Root
+                  <CalendarModeToggle
                     value={calendarMode}
-                    onValueChange={(details) => {
-                      if (details.value) {
-                        setCalendarMode(details.value as CalendarMode);
-                      }
-                    }}
-                  >
-                    <SegmentGroup.Indicator />
-                    <SegmentGroup.Items items={calendarModeItems} />
-                  </SegmentGroup.Root>
+                    onChange={setCalendarMode}
+                  />
                 </Stack>
 
                 <HStack gap={3} wrap="wrap">
@@ -2905,6 +3523,16 @@ export const CrmDashboard = ({ view = 'calendar' }: { view?: CrmView }) => {
                       options={statusOptions}
                       placeholder="Всі статуси"
                       onChange={setStatusFilter}
+                    />
+                  </Box>
+                  <Box minW={{ base: '100%', md: '150px' }}>
+                    <SelectField
+                      label="Масштаб"
+                      value={String(calendarScaleMinutes)}
+                      options={calendarScaleItems}
+                      onChange={(scale) =>
+                        setCalendarScaleMinutes(toCalendarScaleMinutes(scale))
+                      }
                     />
                   </Box>
                 </HStack>
@@ -2928,10 +3556,12 @@ export const CrmDashboard = ({ view = 'calendar' }: { view?: CrmView }) => {
               doctorFilter={doctorFilter}
               creatingAppointment={createAppointment.isPending}
               creatingException={createException.isPending}
+              calendarScaleMinutes={calendarScaleMinutes}
               updatingAppointmentId={updateAppointment.variables?.id}
               deletingAppointmentId={deleteAppointment.variables}
               updatingExceptionId={updateException.variables?.id}
               deletingExceptionId={deleteException.variables}
+              onSelectSlot={openSlotDraft}
               onCreate={(payload) => createAppointment.mutateAsync(payload)}
               onCreateException={(payload) =>
                 createException.mutateAsync(payload)
@@ -3090,10 +3720,12 @@ const GoogleCalendarGrid = ({
   doctorFilter,
   creatingAppointment,
   creatingException,
+  calendarScaleMinutes,
   updatingAppointmentId,
   deletingAppointmentId,
   updatingExceptionId,
   deletingExceptionId,
+  onSelectSlot,
   onCreate,
   onCreateException,
   onUpdate,
@@ -3111,10 +3743,12 @@ const GoogleCalendarGrid = ({
   doctorFilter: string;
   creatingAppointment?: boolean;
   creatingException?: boolean;
+  calendarScaleMinutes: CalendarScaleMinutes;
   updatingAppointmentId?: number;
   deletingAppointmentId?: number;
   updatingExceptionId?: number;
   deletingExceptionId?: number;
+  onSelectSlot: (draft: CalendarSlotDraft) => void;
   onCreate: (payload: CrmAppointmentPayload) => Promise<unknown>;
   onCreateException: (payload: CrmScheduleExceptionPayload) => Promise<unknown>;
   onUpdate: (
@@ -3132,6 +3766,7 @@ const GoogleCalendarGrid = ({
   const activeDoctors = doctorFilter
     ? doctors.filter((doctor) => String(doctor.id) === doctorFilter)
     : doctors;
+  const selectedDoctorId = toRequiredId(doctorFilter);
   const columns =
     mode === 'day'
       ? activeDoctors.map((doctor) => ({
@@ -3146,6 +3781,7 @@ const GoogleCalendarGrid = ({
           title: shortWeekDays[day.getDay()],
           subtitle: formatDate(day),
           day,
+          doctorId: selectedDoctorId,
         }));
 
   return (
@@ -3198,6 +3834,7 @@ const GoogleCalendarGrid = ({
                 clients={clients}
                 creatingAppointment={creatingAppointment}
                 creatingException={creatingException}
+                availabilityStepMinutes={calendarScaleMinutes}
                 onCreate={onCreate}
                 onCreateException={onCreateException}
               />
@@ -3233,6 +3870,8 @@ const GoogleCalendarGrid = ({
                 deletingAppointmentId={deletingAppointmentId}
                 updatingExceptionId={updatingExceptionId}
                 deletingExceptionId={deletingExceptionId}
+                calendarScaleMinutes={calendarScaleMinutes}
+                onSelectSlot={onSelectSlot}
                 onUpdate={onUpdate}
                 onUpdateException={onUpdateException}
                 onDelete={onDelete}
@@ -3268,6 +3907,7 @@ const CalendarColumnHeader = ({
   clients,
   creatingAppointment,
   creatingException,
+  availabilityStepMinutes,
   onCreate,
   onCreateException,
 }: {
@@ -3278,6 +3918,7 @@ const CalendarColumnHeader = ({
   clients: CrmClient[];
   creatingAppointment?: boolean;
   creatingException?: boolean;
+  availabilityStepMinutes: CalendarScaleMinutes;
   onCreate: (payload: CrmAppointmentPayload) => Promise<unknown>;
   onCreateException: (payload: CrmScheduleExceptionPayload) => Promise<unknown>;
 }) => {
@@ -3325,6 +3966,7 @@ const CalendarColumnHeader = ({
             clients={clients}
             initialStartAt={initialStartAt}
             initialDoctorId={column.doctorId}
+            availabilityStepMinutes={availabilityStepMinutes}
             isLoading={creatingAppointment}
             onSubmit={onCreate}
             trigger={
@@ -3379,6 +4021,8 @@ const CalendarColumn = ({
   deletingAppointmentId,
   updatingExceptionId,
   deletingExceptionId,
+  calendarScaleMinutes,
+  onSelectSlot,
   onUpdate,
   onUpdateException,
   onDelete,
@@ -3395,6 +4039,8 @@ const CalendarColumn = ({
   deletingAppointmentId?: number;
   updatingExceptionId?: number;
   deletingExceptionId?: number;
+  calendarScaleMinutes: CalendarScaleMinutes;
+  onSelectSlot: (draft: CalendarSlotDraft) => void;
   onUpdate: (
     id: number,
     payload: Partial<CrmAppointmentPayload>,
@@ -3407,6 +4053,8 @@ const CalendarColumn = ({
   onDeleteException: (id: number) => void;
 }) => {
   const columnDate = toDateInputValue(column.day);
+  const calendarScaleHeight =
+    (calendarScaleMinutes / 60) * CALENDAR_HOUR_HEIGHT;
   const columnAppointments = appointments.filter((appointment) => {
     const isSameDay =
       toDateInputValue(new Date(appointment.startAt)) === columnDate;
@@ -3416,7 +4064,10 @@ const CalendarColumn = ({
     }
 
     return mode === 'day' && column.doctorId
-      ? appointment.doctorId === column.doctorId
+      ? appointment.doctorId === column.doctorId ||
+          appointment.doctors?.some(
+            (doctor) => doctor.doctorId === column.doctorId,
+          )
       : true;
   });
   const columnExceptions = exceptions.filter((exception) => {
@@ -3438,9 +4089,17 @@ const CalendarColumn = ({
       borderRight="1px solid"
       borderColor="blackAlpha.100"
       bg="white"
-      backgroundImage={`linear-gradient(to bottom, var(--chakra-colors-blackAlpha-100) 1px, transparent 1px)`}
-      backgroundSize={`100% ${CALENDAR_HOUR_HEIGHT}px`}
+      backgroundImage={[
+        'linear-gradient(to bottom, var(--chakra-colors-blackAlpha-100) 1px, transparent 1px)',
+        'linear-gradient(to bottom, var(--chakra-colors-blackAlpha-50) 1px, transparent 1px)',
+      ].join(', ')}
+      backgroundSize={`100% ${CALENDAR_HOUR_HEIGHT}px, 100% ${calendarScaleHeight}px`}
     >
+      <CalendarSlotLayer
+        column={column}
+        calendarScaleMinutes={calendarScaleMinutes}
+        onSelectSlot={onSelectSlot}
+      />
       {columnExceptions.map((exception) => (
         <CalendarExceptionCard
           key={exception.id}
@@ -3465,6 +4124,71 @@ const CalendarColumn = ({
           isDeleting={deletingAppointmentId === appointment.id}
           onUpdate={onUpdate}
           onDelete={onDelete}
+        />
+      ))}
+    </Box>
+  );
+};
+
+const CalendarSlotLayer = ({
+  column,
+  calendarScaleMinutes,
+  onSelectSlot,
+}: {
+  column: CalendarColumnData;
+  calendarScaleMinutes: CalendarScaleMinutes;
+  onSelectSlot: (draft: CalendarSlotDraft) => void;
+}) => {
+  const slotCount =
+    ((CALENDAR_END_HOUR - CALENDAR_START_HOUR) * 60) / calendarScaleMinutes;
+  const slotHeight = (calendarScaleMinutes / 60) * CALENDAR_HOUR_HEIGHT;
+  const slots = useMemo(
+    () =>
+      Array.from({ length: slotCount }, (_item, index) => {
+        const startAt = getCalendarSlotStart(
+          column.day,
+          index * calendarScaleMinutes,
+        );
+
+        return {
+          index,
+          startAt,
+          endAt: addMinutes(startAt, calendarScaleMinutes),
+        };
+      }),
+    [calendarScaleMinutes, column.day, slotCount],
+  );
+
+  return (
+    <Box position="absolute" inset={0} zIndex={0}>
+      {slots.map((slot) => (
+        <chakra.button
+          key={`${column.id}-${slot.index}`}
+          type="button"
+          display="block"
+          w="100%"
+          h={`${slotHeight}px`}
+          p={0}
+          border={0}
+          bg="transparent"
+          appearance="none"
+          cursor="copy"
+          aria-label={`Створити у слоті ${formatDate(
+            slot.startAt,
+          )}, ${toTimeInputValue(slot.startAt)}`}
+          _hover={{ bg: 'blackAlpha.50' }}
+          _focusVisible={{
+            outline: '2px solid',
+            outlineColor: 'della.primary',
+            outlineOffset: '-2px',
+          }}
+          onClick={() =>
+            onSelectSlot({
+              startAt: slot.startAt,
+              endAt: slot.endAt,
+              doctorId: column.doctorId,
+            })
+          }
         />
       ))}
     </Box>
@@ -3643,11 +4367,11 @@ const CalendarAppointmentCard = ({
             {getAppointmentClientName(appointment)}
           </Text>
           <Text fontSize="xs" color="gray.700" lineClamp={1}>
-            {appointment.procedure?.title ?? `#${appointment.procedureId}`}
+            {getAppointmentProcedureNames(appointment)}
           </Text>
           {!compact && (
             <Text fontSize="xs" color="gray.500" lineClamp={1}>
-              {appointment.doctor?.name ?? `Лікар #${appointment.doctorId}`}
+              {getAppointmentDoctorNames(appointment)}
             </Text>
           )}
         </Box>
