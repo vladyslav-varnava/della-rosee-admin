@@ -35,6 +35,11 @@ type Props = {
   children: ReactNode;
 };
 
+const SIDEBAR_WIDTH = {
+  expanded: '240px',
+  collapsed: '72px',
+} as const;
+
 const getCurrentPage = (pathname: string) => {
   return adminNavigation.find(
     (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
@@ -56,7 +61,11 @@ export const AdminShell = ({ children }: Props) => {
         position="sticky"
         top={0}
         h="100vh"
-        w={isSidebarCollapsed ? '88px' : '300px'}
+        w={
+          isSidebarCollapsed
+            ? SIDEBAR_WIDTH.collapsed
+            : SIDEBAR_WIDTH.expanded
+        }
         flexShrink={0}
         flexDirection="column"
         bg="white"
