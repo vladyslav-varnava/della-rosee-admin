@@ -49,7 +49,7 @@ export const productVariantsService = {
   },
 
   syncSmartKasaStock: async (variantId: number, cardId: number) => {
-    return apiClient.put<ProductVariant>(
+    return apiClient.post<ProductVariant>(
       `${VARIANT_PATH}/syncSmartKasaStock/${variantId}`,
       {
         cardId,

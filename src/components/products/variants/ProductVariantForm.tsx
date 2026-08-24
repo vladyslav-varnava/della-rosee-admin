@@ -217,7 +217,7 @@ export const ProductVariantForm = ({
                   onClick={() => syncStock.mutate()}
                 >
                   <LuRefreshCw />
-                  Sync stock
+                  Синхронізувати зі смарткасою
                 </Button>
 
                 <Button

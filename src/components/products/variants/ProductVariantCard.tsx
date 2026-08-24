@@ -229,7 +229,7 @@ export const ProductVariantCard = ({ variant }: Props) => {
                 onClick={() => syncStock.mutate()}
               >
                 <LuRefreshCw />
-                Sync stock
+                Синхронізувати зі смарткасою
               </Button>
 
               <Button
