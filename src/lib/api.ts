@@ -32,7 +32,9 @@ export class ApiError extends Error {
 
 const isBrowser = typeof window !== 'undefined';
 
-const getErrorMessageFromData = (data?: ApiErrorData | string | string[]) => {
+const getErrorMessageFromData = (
+  data?: ApiErrorData | string | string[],
+): string | undefined => {
   if (Array.isArray(data)) {
     return data.join(', ');
   }
