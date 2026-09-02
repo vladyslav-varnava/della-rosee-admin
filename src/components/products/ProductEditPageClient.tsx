@@ -13,13 +13,15 @@ import Link from 'next/link';
 import { LuArrowLeft } from 'react-icons/lu';
 
 import { ProductForm } from '@/components/products/form/ProductForm';
+import { ProductVariantEditPageClient } from '@/components/products/variants/ProductVariantEditPageClient';
 import { useGetProduct } from '@/hooks/query/useProductsAdmin';
 
 type Props = {
   productId: number;
+  variantId?: number;
 };
 
-export const ProductEditPageClient = ({ productId }: Props) => {
+const ProductEditFormPage = ({ productId }: Pick<Props, 'productId'>) => {
   const { data: product, isPending, isError } = useGetProduct(productId);
 
   if (isPending) {
@@ -74,4 +76,17 @@ export const ProductEditPageClient = ({ productId }: Props) => {
       <ProductForm product={product} />
     </Stack>
   );
+};
+
+export const ProductEditPageClient = ({ productId, variantId }: Props) => {
+  if (variantId && Number.isFinite(variantId) && variantId > 0) {
+    return (
+      <ProductVariantEditPageClient
+        productId={productId}
+        variantId={variantId}
+      />
+    );
+  }
+
+  return <ProductEditFormPage productId={productId} />;
 };

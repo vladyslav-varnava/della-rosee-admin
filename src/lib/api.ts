@@ -15,6 +15,7 @@ type ApiErrorData = {
   message?: string | string[];
   error?: string;
   statusCode?: number;
+  response?: ApiErrorData | string | string[];
 };
 
 export class ApiError extends Error {
@@ -31,19 +32,45 @@ export class ApiError extends Error {
 
 const isBrowser = typeof window !== 'undefined';
 
-const getErrorMessage = (error: AxiosError<ApiErrorData>) => {
-  const data = error.response?.data;
+const getErrorMessageFromData = (data?: ApiErrorData | string | string[]) => {
+  if (Array.isArray(data)) {
+    return data.join(', ');
+  }
 
-  if (Array.isArray(data?.message)) {
+  if (typeof data === 'string') {
+    return data;
+  }
+
+  if (!data) {
+    return undefined;
+  }
+
+  if (Array.isArray(data.message)) {
     return data.message.join(', ');
   }
 
-  if (typeof data?.message === 'string') {
+  if (typeof data.message === 'string') {
     return data.message;
   }
 
-  if (typeof data?.error === 'string') {
+  const responseMessage = getErrorMessageFromData(data.response);
+
+  if (responseMessage) {
+    return responseMessage;
+  }
+
+  if (typeof data.error === 'string') {
     return data.error;
+  }
+
+  return undefined;
+};
+
+const getErrorMessage = (error: AxiosError<ApiErrorData>) => {
+  const responseMessage = getErrorMessageFromData(error.response?.data);
+
+  if (responseMessage) {
+    return responseMessage;
   }
 
   if (error.message) {

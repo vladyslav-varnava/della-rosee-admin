@@ -38,7 +38,9 @@ export const CreateVariantFromSmartKasaForm = ({ productId }: Props) => {
       },
       {
         onSuccess: (variant) => {
-          router.push(`/products/${productId}/variants/${variant.id}/edit`);
+          router.push(
+            `/products/${variant.productId}/edit?variantId=${variant.id}`,
+          );
         },
       },
     );

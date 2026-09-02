@@ -120,7 +120,7 @@ export const ProductVariantsSection = ({ productId, variants }: Props) => {
 
                     <Button asChild size="sm" mt={3} variant="outline">
                       <Link
-                        href={`/products/${productId}/variants/${variant.id}/edit`}
+                        href={`/products/${productId}/edit?variantId=${variant.id}`}
                       >
                         <LuPencil />
                         Редагувати

@@ -13,7 +13,10 @@ import {
 } from '@chakra-ui/react';
 import { LuArrowLeft } from 'react-icons/lu';
 
-import { useGetProduct } from '@/hooks/query/useProductsAdmin';
+import {
+  useGetProduct,
+  useGetProductVariant,
+} from '@/hooks/query/useProductsAdmin';
 
 import { ProductVariantForm } from './ProductVariantForm';
 
@@ -26,11 +29,15 @@ export const ProductVariantEditPageClient = ({
   productId,
   variantId,
 }: Props) => {
-  const { data: product, isPending, isError } = useGetProduct(productId);
+  const {
+    data: variant,
+    isPending: isVariantPending,
+    isError: isVariantError,
+  } = useGetProductVariant(variantId);
+  const resolvedProductId = variant?.productId ?? productId;
+  const { data: product } = useGetProduct(resolvedProductId);
 
-  const variant = product?.items?.find((item) => item.id === variantId);
-
-  if (isPending) {
+  if (isVariantPending) {
     return (
       <Center py={16}>
         <VStack color="della.accent">
@@ -41,7 +48,7 @@ export const ProductVariantEditPageClient = ({
     );
   }
 
-  if (isError || !product || !variant) {
+  if (isVariantError || !variant) {
     return (
       <Box
         bg="white"
@@ -61,7 +68,7 @@ export const ProductVariantEditPageClient = ({
         </Text>
 
         <Button asChild mt={6} variant="outline">
-          <Link href={`/products/${productId}/edit`}>
+          <Link href={`/products/${resolvedProductId}/edit`}>
             <LuArrowLeft />
             До продукту
           </Link>
@@ -73,15 +80,15 @@ export const ProductVariantEditPageClient = ({
   return (
     <Stack gap={5}>
       <Button asChild variant="outline" w="fit-content">
-        <Link href={`/products/${productId}/edit`}>
+        <Link href={`/products/${resolvedProductId}/edit`}>
           <LuArrowLeft />
           До продукту
         </Link>
       </Button>
 
       <ProductVariantForm
-        productId={product.id}
-        productTitle={product.title}
+        productId={resolvedProductId}
+        productTitle={product?.title ?? `Product #${resolvedProductId}`}
         variant={variant}
       />
     </Stack>

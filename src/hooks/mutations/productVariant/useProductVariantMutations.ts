@@ -3,7 +3,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { toaster } from '@/components/ui/toaster';
-import { productsKeys } from '@/hooks/query/useProductsAdmin';
+import {
+  productsKeys,
+  productVariantsKeys,
+} from '@/hooks/query/useProductsAdmin';
 import { productVariantsService } from '@/services/product-variants.service';
 import {
   CreateVariantFromSmartKasaPayload,
@@ -50,7 +53,8 @@ export const useCreateVariantFromSmartKasa = () => {
 
     onError: (error) => {
       toaster.create({
-        title:
+        title: 'Не вдалося створити варіант зі SmartKasa',
+        description:
           error instanceof Error
             ? error.message
             : 'Не вдалося створити варіант зі SmartKasa',
@@ -59,6 +63,11 @@ export const useCreateVariantFromSmartKasa = () => {
     },
 
     onSuccess: async (variant) => {
+      queryClient.setQueryData<ProductVariant>(
+        productVariantsKeys.details(variant.id),
+        variant,
+      );
+
       queryClient.setQueryData<Product>(
         productsKeys.details(variant.productId),
         (product) => upsertVariantInProduct(product, variant),
@@ -94,6 +103,11 @@ export const useUpdateProductVariant = (
     },
 
     onSuccess: async (variant) => {
+      queryClient.setQueryData<ProductVariant>(
+        productVariantsKeys.details(variant.id),
+        variant,
+      );
+
       queryClient.setQueryData<Product>(
         productsKeys.details(productId),
         (product) => upsertVariantInProduct(product, variant),
@@ -125,6 +139,11 @@ export const useToggleProductVariantVisibility = (variant: ProductVariant) => {
     },
 
     onSuccess: async (updatedVariant) => {
+      queryClient.setQueryData<ProductVariant>(
+        productVariantsKeys.details(updatedVariant.id),
+        updatedVariant,
+      );
+
       queryClient.setQueryData<Product>(
         productsKeys.details(updatedVariant.productId),
         (product) => upsertVariantInProduct(product, updatedVariant),
@@ -157,6 +176,10 @@ export const useDeleteProductVariant = (
     },
 
     onSuccess: async () => {
+      queryClient.removeQueries({
+        queryKey: productVariantsKeys.details(variantId),
+      });
+
       queryClient.setQueryData<Product>(
         productsKeys.details(productId),
         (product) => removeVariantFromProduct(product, variantId),
@@ -189,6 +212,11 @@ export const useSyncSmartKasaStock = (variant: ProductVariant) => {
     },
 
     onSuccess: async (updatedVariant) => {
+      queryClient.setQueryData<ProductVariant>(
+        productVariantsKeys.details(updatedVariant.id),
+        updatedVariant,
+      );
+
       queryClient.setQueryData<Product>(
         productsKeys.details(updatedVariant.productId),
         (product) => upsertVariantInProduct(product, updatedVariant),
