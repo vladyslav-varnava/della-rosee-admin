@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import Link from 'next/link';
 
 import {
   Box,
@@ -15,7 +16,7 @@ import {
   Text,
 } from '@chakra-ui/react';
 import { Controller, useForm } from 'react-hook-form';
-import { LuSave } from 'react-icons/lu';
+import { LuExternalLink, LuSave } from 'react-icons/lu';
 
 import { useUpdateOrder } from '@/hooks/mutations/order/useUpdateOrder';
 import { useGetSellers } from '@/hooks/query/useGetSellers';
@@ -72,6 +73,7 @@ const getDefaultValues = (order: Order): FormValues => {
 export const OrderEditForm = ({ order, onCancel, onSaved }: Props) => {
   const updateOrder = useUpdateOrder();
   const { data: sellers = [] } = useGetSellers();
+  const userId = order.userId ?? order.user?.id;
 
   const sellerOptions = useMemo(
     () => [
@@ -160,9 +162,20 @@ export const OrderEditForm = ({ order, onCancel, onSaved }: Props) => {
           </Box>
 
           <Box>
-            <Text fontWeight="900" color="della.text">
-              Контактні дані
-            </Text>
+            <HStack justify="space-between" gap={3} wrap="wrap">
+              <Text fontWeight="900" color="della.text">
+                Контактні дані
+              </Text>
+
+              {userId ? (
+                <Button asChild size="xs" variant="outline">
+                  <Link href={`/users/${userId}`}>
+                    <LuExternalLink />
+                    Редагувати юзера
+                  </Link>
+                </Button>
+              ) : null}
+            </HStack>
 
             <SimpleGrid mt={4} columns={{ base: 1, md: 2 }} gap={4}>
               <Field.Root invalid={!!errors.firstName}>

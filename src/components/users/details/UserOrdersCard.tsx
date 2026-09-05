@@ -120,14 +120,6 @@ export const UserOrdersCard = ({ orders }: Props) => {
                   </Text>
                   <Text fontWeight="800">{formatMoney(order.fulAmount)}</Text>
                 </Box>
-
-                <Box>
-                  <Text fontSize="xs" color="gray.500">
-                    Товарів
-                  </Text>
-                  <Text fontWeight="800">{order.orderItems?.length ?? 0}</Text>
-                </Box>
-
                 <Box>
                   <Text fontSize="xs" color="gray.500">
                     Створено

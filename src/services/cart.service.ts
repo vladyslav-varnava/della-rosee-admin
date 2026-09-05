@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api';
-import { Cart, CartCreateResponse } from '@/types/cart';
+import { Cart, CartCreateResponse, CartItem } from '@/types/cart';
 
 export type AddItemToCartByIdPayload = {
   quantity: number;
@@ -39,5 +39,8 @@ export const cartService = {
   },
   updateCartItem: async (payload: UpdateCartItemPayload) => {
     return apiClient.post<Cart, UpdateCartItemPayload>('/cart/update', payload);
+  },
+  removeCartItem: async (cartItemId: string) => {
+    return apiClient.delete<CartItem>(`/cart/delete/${cartItemId}`);
   },
 };

@@ -2,9 +2,20 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { Box, Card, Flex, HStack, Image, Text, VStack } from '@chakra-ui/react';
+import {
+  Box,
+  Card,
+  Flex,
+  HStack,
+  IconButton,
+  Image,
+  Text,
+  VStack,
+} from '@chakra-ui/react';
+import { LuTrash2 } from 'react-icons/lu';
 
 import { AdminQuantityStepperInput } from '@/components/orders/create/AdminQuantityStepperInput';
+import { useRemoveCartItem } from '@/hooks/mutations/cart/useRemoveCartItem';
 import { useUpdateCartItem } from '@/hooks/mutations/cart/useUpdateCartItem';
 import { CartItem } from '@/types/cart';
 
@@ -39,9 +50,11 @@ export const AdminOrderCartItem = ({
   const [draftQuantity, setDraftQuantity] = useState<number | null>(null);
 
   const updateCartItem = useUpdateCartItem({ cartId, userId });
+  const removeCartItem = useRemoveCartItem({ cartId, userId });
 
   const cartItemId = getCartItemId(item);
   const currentQuantity = draftQuantity ?? item.quantity;
+  const isPending = updateCartItem.isPending || removeCartItem.isPending;
 
   const maxQuantity = shouldNotCheckInStock
     ? 99
@@ -103,6 +116,20 @@ export const AdminOrderCartItem = ({
     [item.quantity, maxQuantity],
   );
 
+  const removeItem = () => {
+    const confirmed = window.confirm('Видалити товар з кошика?');
+
+    if (!confirmed) return;
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    setDraftQuantity(null);
+
+    removeCartItem.mutate(cartItemId);
+  };
+
   const hasDiscount = item.basePrice > item.price;
   const totalPrice = item.price * currentQuantity;
   const totalBasePrice = item.basePrice * currentQuantity;
@@ -142,27 +169,42 @@ export const AdminOrderCartItem = ({
           </Box>
 
           <VStack flex="1" minW={0} align="stretch" gap={3}>
-            <Box minW={0}>
-              <Text
-                color="della.text"
-                fontSize={{ base: '13px', md: '14px' }}
-                fontWeight={900}
-                lineHeight="1.3"
-                lineClamp={2}
-              >
-                {item.title}
-              </Text>
-
-              <Text mt={1} fontSize="12px" color="gray.500" fontWeight={700}>
-                Артикул: {item.code || '—'}
-              </Text>
-
-              {item.volume ? (
-                <Text mt={0.5} fontSize="12px" color="gray.500">
-                  {item.volume}
+            <Flex align="flex-start" justify="space-between" gap={2}>
+              <Box minW={0}>
+                <Text
+                  color="della.text"
+                  fontSize={{ base: '13px', md: '14px' }}
+                  fontWeight={900}
+                  lineHeight="1.3"
+                  lineClamp={2}
+                >
+                  {item.title}
                 </Text>
-              ) : null}
-            </Box>
+
+                <Text mt={1} fontSize="12px" color="gray.500" fontWeight={700}>
+                  Артикул: {item.code || '—'}
+                </Text>
+
+                {item.volume ? (
+                  <Text mt={0.5} fontSize="12px" color="gray.500">
+                    {item.volume}
+                  </Text>
+                ) : null}
+              </Box>
+
+              <IconButton
+                size="xs"
+                variant="ghost"
+                colorPalette="red"
+                aria-label="Видалити товар з кошика"
+                loading={removeCartItem.isPending}
+                disabled={isPending}
+                flexShrink={0}
+                onClick={removeItem}
+              >
+                <LuTrash2 />
+              </IconButton>
+            </Flex>
 
             <HStack width="100%" justify="space-between" align="center" gap={3}>
               <Box
@@ -171,13 +213,13 @@ export const AdminOrderCartItem = ({
                 px={1}
                 py={1}
                 flexShrink={0}
-                opacity={updateCartItem.isPending ? 0.65 : 1}
+                opacity={isPending ? 0.65 : 1}
               >
                 <AdminQuantityStepperInput
                   min={1}
                   max={maxQuantity}
                   value={currentQuantity.toString()}
-                  disabled={updateCartItem.isPending}
+                  disabled={isPending}
                   onValueChange={onValueChange}
                 />
               </Box>

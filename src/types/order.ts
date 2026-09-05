@@ -1,14 +1,22 @@
+import type { PromotionType } from './promotion';
+
 export type DeliveryType =
   'PICKUP' | 'NOVA_POSHTA_WAREHOUSE' | 'NOVA_POSHTA_POSTMAT' | string;
 
-export type DiscountLine = {
-  discount: number;
-  reason?: string;
-  promotionId?: number;
+export interface DiscountLine {
+  promotionId: string;
+  title: string;
+  description?: string;
+  amount: number;
+  appliedToItems: Array<number | string>;
+  type: PromotionType;
+  productText?: string;
+  endAt?: Date;
+  isShowTimer?: boolean;
+  freeProducts?: { productId: string; quantity: number }[];
   promoCode?: string;
-  affectedItems?: number[];
-  meta?: Record<string, unknown>;
-};
+  promoCodeId?: string;
+}
 
 export type OrderUser = {
   id: number;
@@ -22,10 +30,14 @@ export interface OrderItem {
   id: number;
   orderId: number;
   productId: number;
+  cardId?: number | string;
+  productVariantId?: number | string;
+  variantId?: number | string;
   quantity: number;
   code: string;
   image: string;
   title: string;
+  basePrice?: number;
   price: number;
   slug: string;
   quantityInStock: number;

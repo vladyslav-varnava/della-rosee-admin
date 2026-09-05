@@ -281,6 +281,14 @@ type OrderItemsCardProps = {
   order: Order;
 };
 
+const getItemDiscounts = (order: Order, productId: number) => {
+  return (order.discounts ?? []).filter((discount) =>
+    discount.appliedToItems?.some(
+      (discountProductId) => String(discountProductId) === String(productId),
+    ),
+  );
+};
+
 const OrderItemsCard = ({ order }: OrderItemsCardProps) => {
   const router = useRouter();
   const [loadingProductVariantId, setLoadingProductVariantId] = useState<
@@ -324,121 +332,222 @@ const OrderItemsCard = ({ order }: OrderItemsCardProps) => {
         </Box>
       ) : (
         <Stack gap={3}>
-          {items.map((item) => (
-            <Box
-              key={item.id}
-              border="1px solid"
-              borderColor="blackAlpha.100"
-              borderRadius="xl"
-              p={4}
-              bg="gray.50"
-            >
-              <Flex gap={4} direction={{ base: 'column', md: 'row' }}>
-                <Box
-                  w={{ base: '100%', md: '96px' }}
-                  h="96px"
-                  bg="white"
-                  border="1px solid"
-                  borderColor="blackAlpha.100"
-                  borderRadius="lg"
-                  overflow="hidden"
-                  flexShrink={0}
-                >
-                  {item.image ? (
-                    <Image
-                      src={item.image}
-                      alt={item.title}
-                      w="100%"
-                      h="100%"
-                      objectFit="contain"
-                    />
-                  ) : null}
-                </Box>
+          {items.map((item) => {
+            const itemDiscounts = getItemDiscounts(order, item.productId);
+            const discountLinks = Array.from(
+              itemDiscounts
+                .reduce((discountsById, discount) => {
+                  discountsById.set(discount.promotionId, {
+                    id: discount.promotionId,
+                    title: discount.title?.trim() || 'Знижка',
+                  });
 
-                <Box flex={1} minW={0}>
-                  <Flex
-                    justify="space-between"
-                    align={{ base: 'start', md: 'center' }}
-                    gap={3}
-                    direction={{ base: 'column', md: 'row' }}
+                  return discountsById;
+                }, new Map<string, { id: string; title: string }>())
+                .values(),
+            );
+            const loyaltyDiscountAmount = itemDiscounts
+              .filter((discount) => discount.type === 'LOYALTY')
+              .reduce((total, discount) => {
+                const amount = Number(discount.amount);
+
+                return total + (Number.isFinite(amount) ? amount : 0);
+              }, 0);
+            const basePrice =
+              typeof item.basePrice === 'number' &&
+              Number.isFinite(item.basePrice)
+                ? item.basePrice
+                : null;
+            const itemPrice =
+              basePrice !== null && loyaltyDiscountAmount > 0
+                ? Math.max(basePrice - loyaltyDiscountAmount, 0)
+                : item.price;
+            const priceDifference =
+              basePrice === null ? 0 : itemPrice - basePrice;
+            const hasPriceDifference =
+              basePrice !== null && priceDifference !== 0;
+            const shouldShowPriceDetails =
+              discountLinks.length > 0 || hasPriceDifference;
+
+            return (
+              <Box
+                key={item.id}
+                border="1px solid"
+                borderColor="blackAlpha.100"
+                borderRadius="xl"
+                p={4}
+                bg="gray.50"
+              >
+                <Flex gap={4} direction={{ base: 'column', md: 'row' }}>
+                  <Box
+                    w={{ base: '100%', md: '96px' }}
+                    h="96px"
+                    bg="white"
+                    border="1px solid"
+                    borderColor="blackAlpha.100"
+                    borderRadius="lg"
+                    overflow="hidden"
+                    flexShrink={0}
                   >
-                    <Box>
-                      <Text fontWeight="900" color="della.text">
-                        {item.title}
-                      </Text>
+                    {item.image ? (
+                      <Image
+                        src={item.image}
+                        alt={item.title}
+                        w="100%"
+                        h="100%"
+                        objectFit="contain"
+                      />
+                    ) : null}
+                  </Box>
 
-                      <Text mt={1} fontSize="sm" color="gray.500">
-                        Артикул: {item.code || '—'} · Product ID:{' '}
-                        {item.productId}
-                      </Text>
-                    </Box>
+                  <Box flex={1} minW={0}>
+                    <Flex
+                      justify="space-between"
+                      align={{ base: 'start', md: 'center' }}
+                      gap={3}
+                      direction={{ base: 'column', md: 'row' }}
+                    >
+                      <Box>
+                        <Text fontWeight="900" color="della.text">
+                          {item.title}
+                        </Text>
 
-                    <HStack gap={2} flexShrink={0}>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        loading={loadingProductVariantId === item.productId}
-                        onClick={() => void navigateToProduct(item.productId)}
-                      >
-                        <LuExternalLink />
-                        Продукт
-                      </Button>
+                        <Text mt={1} fontSize="sm" color="gray.500">
+                          Артикул: {item.code || '—'} · Product ID:{' '}
+                          {item.productId}
+                        </Text>
 
-                      <Button
-                        asChild
-                        size="sm"
-                        variant="outline"
-                        disabled={!item.slug}
-                      >
-                        <Link
-                          href={`https://dellarosee.com/product/${item.slug}`}
-                          target="_blank"
-                          rel="noreferrer"
+                        {discountLinks.length > 0 ? (
+                          <HStack gap={1.5} mt={2} wrap="wrap">
+                            {discountLinks.map((discount) => (
+                              <Badge
+                                key={discount.id}
+                                colorPalette="green"
+                                borderRadius="full"
+                                px={2}
+                                py={0.5}
+                              >
+                                Знижка:{' '}
+                                <Link href={`/promotions/${discount.id}/edit`}>
+                                  {discount.title}
+                                </Link>
+                              </Badge>
+                            ))}
+                          </HStack>
+                        ) : null}
+                      </Box>
+
+                      <HStack gap={2} flexShrink={0}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          loading={loadingProductVariantId === item.productId}
+                          onClick={() => void navigateToProduct(item.productId)}
                         >
                           <LuExternalLink />
-                          Сайт
-                        </Link>
-                      </Button>
-                    </HStack>
-                  </Flex>
+                          Продукт
+                        </Button>
 
-                  <SimpleGrid columns={{ base: 2, md: 4 }} gap={3} mt={4}>
-                    <Box>
-                      <Text fontSize="xs" color="gray.500">
-                        Кількість
-                      </Text>
-                      <Text fontWeight="800">{item.quantity}</Text>
-                    </Box>
+                        <Button
+                          asChild
+                          size="sm"
+                          variant="outline"
+                          disabled={!item.slug}
+                        >
+                          <Link
+                            href={`https://dellarosee.com/product/${item.slug}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <LuExternalLink />
+                            Сайт
+                          </Link>
+                        </Button>
+                      </HStack>
+                    </Flex>
 
-                    <Box>
-                      <Text fontSize="xs" color="gray.500">
-                        Ціна
-                      </Text>
-                      <Text fontWeight="800">{formatMoney(item.price)}</Text>
-                    </Box>
+                    <SimpleGrid columns={{ base: 2, md: 4 }} gap={3} mt={4}>
+                      <Box>
+                        <Text fontSize="xs" color="gray.500">
+                          Кількість
+                        </Text>
+                        <Text fontWeight="800">{item.quantity}</Text>
+                      </Box>
 
-                    <Box>
-                      <Text fontSize="xs" color="gray.500">
-                        Сума
-                      </Text>
-                      <Text fontWeight="800">
-                        {formatMoney(item.price * item.quantity)}
-                      </Text>
-                    </Box>
+                      <Box>
+                        <Text fontSize="xs" color="gray.500">
+                          Ціна
+                        </Text>
+                        {shouldShowPriceDetails ? (
+                          <Stack gap={0.5}>
+                            {basePrice !== null ? (
+                              <HStack gap={1.5}>
+                                <Text fontSize="xs" color="gray.500">
+                                  До:
+                                </Text>
+                                <Text
+                                  fontSize="xs"
+                                  color="gray.400"
+                                  fontWeight="700"
+                                  textDecoration="line-through"
+                                >
+                                  {formatMoney(basePrice)}
+                                </Text>
+                              </HStack>
+                            ) : null}
 
-                    <Box>
-                      <Text fontSize="xs" color="gray.500">
-                        На складі
-                      </Text>
-                      <Text fontWeight="800">
-                        {item.quantityInStock ?? '—'}
-                      </Text>
-                    </Box>
-                  </SimpleGrid>
-                </Box>
-              </Flex>
-            </Box>
-          ))}
+                            <HStack gap={1.5}>
+                              <Text fontSize="xs" color="gray.500">
+                                Після:
+                              </Text>
+                              <Text fontWeight="800">
+                                {formatMoney(itemPrice)}
+                              </Text>
+                            </HStack>
+
+                            {hasPriceDifference ? (
+                              <Text
+                                fontSize="xs"
+                                color={
+                                  priceDifference < 0
+                                    ? 'green.600'
+                                    : 'orange.600'
+                                }
+                                fontWeight="700"
+                              >
+                                Різниця: {priceDifference > 0 ? '+' : ''}
+                                {formatMoney(priceDifference)}
+                              </Text>
+                            ) : null}
+                          </Stack>
+                        ) : (
+                          <Text fontWeight="800">{formatMoney(itemPrice)}</Text>
+                        )}
+                      </Box>
+
+                      <Box>
+                        <Text fontSize="xs" color="gray.500">
+                          Сума
+                        </Text>
+                        <Text fontWeight="800">
+                          {formatMoney(itemPrice * item.quantity)}
+                        </Text>
+                      </Box>
+
+                      <Box>
+                        <Text fontSize="xs" color="gray.500">
+                          На складі
+                        </Text>
+                        <Text fontWeight="800">
+                          {item.quantityInStock ?? '—'}
+                        </Text>
+                      </Box>
+                    </SimpleGrid>
+                  </Box>
+                </Flex>
+              </Box>
+            );
+          })}
         </Stack>
       )}
     </SectionCard>
@@ -487,9 +596,6 @@ export const OrderDetailsPageClient = ({ orderId }: Props) => {
       </Box>
     );
   }
-
-  const discounts = order.discounts ?? [];
-  const userId = order.userId ?? order.user?.id;
 
   return (
     <Stack gap={5}>
