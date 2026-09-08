@@ -17,6 +17,7 @@ import { MultiOptionSelectField } from './MultiOptionSelectField';
 import { SingleOptionSelectField } from './SingleOptionSelectField';
 
 import { useState } from 'react';
+import { BrandAutocompleteField } from '@/components/products/form/BrandAutocompleteField';
 import { ProductVariantsSection } from '@/components/products/variants/ProductVariantsSection';
 import dynamic from 'next/dynamic';
 
@@ -173,7 +174,6 @@ export const ProductForm = ({ product }: Props) => {
     control,
     register,
     handleSubmit,
-    setValue,
     watch,
     formState: { errors, isDirty },
   } = useForm<ProductFormValues>({
@@ -328,14 +328,16 @@ export const ProductForm = ({ product }: Props) => {
                   control={control}
                   name="brand"
                   rules={{
-                    required: 'Оберіть бренд',
+                    required: 'Вкажіть бренд',
                   }}
                   render={({ field }) => (
-                    <SingleOptionSelectField
+                    <BrandAutocompleteField
                       label="Бренд"
                       value={field.value}
                       options={brandsList}
-                      placeholder="Оберіть бренд"
+                      placeholder="Вкажіть бренд"
+                      errorText={errors.brand?.message}
+                      onBlur={field.onBlur}
                       onChange={field.onChange}
                     />
                   )}
