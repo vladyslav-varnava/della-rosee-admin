@@ -180,6 +180,7 @@ export const hairProductList = [
 ];
 
 export const brandsList = [
+  { value: 'Academie', label: 'Academie'},
   { value: 'AlphaScience', label: 'AlphaScience' },
   { value: 'Azelogy', label: 'Azelogy' },
   { value: 'BABE LABORATORIOS', label: 'BABE LABORATORIOS' },
@@ -196,6 +197,7 @@ export const brandsList = [
   { value: 'CUSKIN', label: 'CUSKIN' },
   { value: 'Derma Series', label: 'Derma Series' },
   { value: 'dermAfirm', label: 'dermAfirm' },
+  { value: 'Dr.Spiller', label: 'Dr.Spiller' },
   { value: 'Elegant', label: 'Elegant' },
   { value: 'ELENEON', label: 'ELENEON' },
   { value: 'FeetCalm', label: 'FeetCalm' },
