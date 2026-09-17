@@ -120,6 +120,46 @@ const objectValue = (value: unknown) => {
     : {};
 };
 
+const PRIMITIVE_REPEATED_VALUE_TYPES = new Set([
+  'cartTotalGte',
+  'cartTotalLte',
+  'usageLimitNotReached',
+  'perUserLimitNotReached',
+  'fixedDiscount',
+  'percentDiscount',
+  'percentDiscountOnEveryProduct',
+  'freeCheapestItem',
+  'none',
+]);
+
+const isRuleArrayItem = (
+  value: unknown,
+): value is { type: string; value: unknown } => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+
+  return (
+    typeof (value as { type?: unknown }).type === 'string' &&
+    Object.prototype.hasOwnProperty.call(value, 'value')
+  );
+};
+
+const isRepeatedRuleValue = (
+  type: string,
+  value: unknown,
+): value is unknown[] => {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    (PRIMITIVE_REPEATED_VALUE_TYPES.has(type) ||
+      value.every(
+        (item) =>
+          Boolean(item) && typeof item === 'object' && !Array.isArray(item),
+      ))
+  );
+};
+
 const conditionValueToForm = (type: string, value: unknown) => {
   const currentValue = objectValue(value);
 
@@ -193,14 +233,32 @@ const payloadToFormRules = (
   payload: unknown,
   valueMapper: (type: string, value: unknown) => unknown,
 ) => {
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+  if (Array.isArray(payload)) {
+    return payload.filter(isRuleArrayItem).map((rule) => ({
+      type: rule.type,
+      value: valueMapper(rule.type, rule.value),
+    }));
+  }
+
+  if (!payload || typeof payload !== 'object') {
     return [];
   }
 
-  return Object.entries(payload).map(([type, value]) => ({
-    type,
-    value: valueMapper(type, value),
-  }));
+  return Object.entries(payload).flatMap(([type, value]) => {
+    if (isRepeatedRuleValue(type, value)) {
+      return value.map((ruleValue) => ({
+        type,
+        value: valueMapper(type, ruleValue),
+      }));
+    }
+
+    return [
+      {
+        type,
+        value: valueMapper(type, value),
+      },
+    ];
+  });
 };
 
 const getDefaultValues = (
@@ -355,7 +413,22 @@ const serializeRules = (
       return result;
     }
 
-    result[rule.type] = valueSerializer(rule.type, rule.value);
+    const nextValue = valueSerializer(rule.type, rule.value);
+    const currentValue = result[rule.type];
+
+    if (currentValue === undefined) {
+      result[rule.type] = nextValue;
+
+      return result;
+    }
+
+    if (Array.isArray(currentValue)) {
+      currentValue.push(nextValue);
+
+      return result;
+    }
+
+    result[rule.type] = [currentValue, nextValue];
 
     return result;
   }, {});
